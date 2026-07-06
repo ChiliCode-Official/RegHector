@@ -444,7 +444,10 @@ function performLogin(user) {
 // Handle login typing behavior
 if (loginNameInput) {
   loginNameInput.addEventListener('input', (e) => {
-    const val = e.target.value.trim().toLowerCase();
+    // Normalizar para quitar acentos (héctor -> hector)
+    const rawVal = e.target.value.trim().toLowerCase();
+    const val = rawVal.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
     loginErrorMsg.style.display = 'none';
     if (val === 'hector' || val === 'hector omar' || val === 'hector omar lopez mora') {
       loginPasswordContainer.style.display = 'block';
@@ -458,7 +461,8 @@ if (loginNameInput) {
     // Filter visually the buttons if typing
     const buttons = loginUsersListContainer.querySelectorAll('.login-option');
     buttons.forEach(btn => {
-      if (btn.textContent.toLowerCase().includes(val)) {
+      const btnText = btn.textContent.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (btnText.includes(val)) {
         btn.style.display = 'flex';
       } else {
         btn.style.display = 'none';
@@ -476,15 +480,16 @@ if (loginForm) {
     
     let matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
     
-    // Variaciones para el jefe
+    // Variaciones para el jefe (sin acentos)
+    const cleanNameVal = nameVal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
-    if (hectorVariations.includes(nameVal.toLowerCase())) {
+    if (hectorVariations.includes(cleanNameVal)) {
       matchedUser = state.users.find(u => u.roles && u.roles.includes('boss'));
     }
     
     // Fallback if Firestore has not loaded/synced yet
     if (!matchedUser && state.users.length === 0) {
-      if (hectorVariations.includes(nameVal.toLowerCase())) {
+      if (hectorVariations.includes(cleanNameVal)) {
         matchedUser = DEFAULT_USERS.find(u => u.roles && u.roles.includes('boss'));
       } else {
         matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
