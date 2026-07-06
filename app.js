@@ -123,6 +123,18 @@ const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
 
 // Auth Flow
+function renderLoginUsers() {
+  const datalist = document.getElementById('login-users-datalist');
+  if (datalist) {
+    datalist.innerHTML = '';
+    state.users.forEach(user => {
+      const opt = document.createElement('option');
+      opt.value = user.name;
+      datalist.appendChild(opt);
+    });
+  }
+}
+
 function performLogin(user) {
   state.currentUser = user;
   loginScreen.style.display = 'none';
@@ -677,6 +689,7 @@ userForm.addEventListener('submit', (e) => {
   updateMetrics();
   renderUsersTable();
   populateDropdowns();
+  renderLoginUsers();
   userModal.classList.remove('active');
 });
 
