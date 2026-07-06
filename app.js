@@ -1351,6 +1351,8 @@ function init() {
     Notification.requestPermission();
   }
   
+  renderLoginUsers(); // Render immediately using DEFAULT_USERS until Firebase syncs
+  
   loadData();
   applyTheme();
   
