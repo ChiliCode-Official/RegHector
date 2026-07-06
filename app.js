@@ -307,10 +307,14 @@ function renderLoginUsers() {
   if (loginUsersListContainer) {
     loginUsersListContainer.innerHTML = '';
     const usersToRender = state.users;
-    usersToRender.forEach(user => {
+    usersToRender.forEach((user, index) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'login-option';
+      
+      if (index >= 2) {
+        btn.style.display = 'none';
+      }
       
       const isBoss = user.roles && user.roles.includes('boss');
       const roleName = isBoss ? 'Notario Público / Jefe' : (user.roles && user.roles.includes('personal') ? 'Personal' : 'Colaborador');
@@ -394,12 +398,16 @@ if (loginNameInput) {
     
     // Filter visually the buttons if typing
     const buttons = loginUsersListContainer.querySelectorAll('.login-option');
-    buttons.forEach(btn => {
-      const btnText = btn.textContent.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (btnText.includes(val)) {
-        btn.style.display = 'flex';
+    buttons.forEach((btn, index) => {
+      if (val === '') {
+        btn.style.display = index < 2 ? 'flex' : 'none';
       } else {
-        btn.style.display = 'none';
+        const btnText = btn.textContent.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (btnText.includes(val)) {
+          btn.style.display = 'flex';
+        } else {
+          btn.style.display = 'none';
+        }
       }
     });
   });
