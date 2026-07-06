@@ -80,18 +80,25 @@ function loadData() {
 
     // 1. Listen to Users in real-time
     db.collection('users').onSnapshot(snapshot => {
+      const usersList = [];
       if (!snapshot.empty) {
-        const usersList = [];
         snapshot.forEach(doc => {
           const data = doc.data();
           if (data.role && !data.roles) data.roles = [data.role];
           usersList.push(data);
         });
-        state.users = usersList;
-        localStorage.setItem('scriptura_users', JSON.stringify(state.users));
-      } else {
-        state.users = [];
       }
+      
+      // Failsafe: Siempre asegurar que exista al menos un usuario jefe (admin)
+      const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
+      if (!bossInList) {
+        const bossUser = { id: 'boss', name: 'Hector Omar Lopez Mora', roles: ['boss'], password: '1234' };
+        usersList.push(bossUser);
+        db.collection('users').doc(bossUser.id).set(bossUser).catch(err => console.error(err));
+      }
+
+      state.users = usersList;
+      localStorage.setItem('scriptura_users', JSON.stringify(state.users));
       
       renderUsersTable();
       populateDropdowns();
