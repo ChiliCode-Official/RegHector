@@ -9,11 +9,14 @@ const firebaseConfig = {
   measurementId: "G-T3DHLBPYTB"
 };
 
+// Webhook Configuration for Make (Paste the URL copied from Make here)
+const WEBHOOK_URL = "https://hook.us1.make.com/dwyx9pxwndp11r693a652yxtkntx6xxt"; // Replace this with your generated Webhook URL if needed
+
 // Check if Firebase is loaded and initialized
 let db = null;
 let useFirebase = false;
 
-if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "") {
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
@@ -35,7 +38,6 @@ let state = {
   notes: [],
   events: [], // Calendar events
   offices: ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'], // Custom notary offices tags
-  webhookUrl: '', // Webhook URL for email/SMS notifications
   theme: 'light',
   currentFilter: 'all', // all, pending, completed
   calendarDate: new Date(), // Selected month/year for display
@@ -121,8 +123,21 @@ const DEFAULT_EVENTS = [
 
 // Data Synchronizer (LocalStorage + Firebase)
 function loadData() {
+  // Pre-load default state to guarantee login & autocomplete suggestions instantly
+  state.users = DEFAULT_USERS;
+  state.deeds = DEFAULT_DEEDS;
+  state.notes = DEFAULT_NOTES;
+  state.events = DEFAULT_EVENTS;
+  state.theme = localStorage.getItem('scriptura_theme') || 'light';
+  state.offices = ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'];
+
+  renderUsersTable();
+  populateDropdowns();
+  renderLoginUsers();
+  renderOfficeTags();
+
   if (useFirebase) {
-    // 1. Listen to Users in real-time
+    // 1. Listen to Users in real-time with error handling
     db.collection('users').onSnapshot(snapshot => {
       const usersList = [];
       snapshot.forEach(doc => usersList.push(doc.data()));
@@ -134,6 +149,8 @@ function loadData() {
         populateDropdowns();
         renderLoginUsers();
       }
+    }, error => {
+      console.warn("Firestore 'users' failed to sync. Using defaults.", error.message);
     });
 
     // 2. Listen to Deeds
@@ -148,6 +165,8 @@ function loadData() {
         populateDropdowns();
         updateMetrics();
       }
+    }, error => {
+      console.warn("Firestore 'deeds' failed to sync. Using defaults.", error.message);
     });
 
     // 3. Listen to Notes
@@ -161,6 +180,8 @@ function loadData() {
         renderNotes();
         updateMetrics();
       }
+    }, error => {
+      console.warn("Firestore 'notes' failed to sync. Using defaults.", error.message);
     });
 
     // 4. Listen to Calendar Events
@@ -174,6 +195,8 @@ function loadData() {
         renderCalendar();
         renderEventsForSelectedDay();
       }
+    }, error => {
+      console.warn("Firestore 'events' failed to sync. Using defaults.", error.message);
     });
 
     // 5. Listen to Offices tags
@@ -185,42 +208,27 @@ function loadData() {
       } else {
         db.collection('config').doc('offices').set({ list: state.offices });
       }
+    }, error => {
+      console.warn("Firestore 'offices config' failed to sync. Using defaults.", error.message);
     });
-
-    // 6. Listen to Webhook URL settings
-    db.collection('config').doc('webhook').onSnapshot(doc => {
-      if (doc.exists) {
-        state.webhookUrl = doc.data().url;
-        const input = document.getElementById('webhook-url-input');
-        if (input) input.value = state.webhookUrl;
-      }
-    });
-
-    // Theme loading
-    state.theme = localStorage.getItem('scriptura_theme') || 'light';
   } else {
-    // Local fallback
+    // Local storage sync fallback
     const users = localStorage.getItem('scriptura_users');
     const deeds = localStorage.getItem('scriptura_deeds');
     const notes = localStorage.getItem('scriptura_notes');
     const events = localStorage.getItem('scriptura_events');
     const offices = localStorage.getItem('scriptura_offices');
-    const webhook = localStorage.getItem('scriptura_webhook');
-    const theme = localStorage.getItem('scriptura_theme');
 
-    state.users = users ? JSON.parse(users) : DEFAULT_USERS;
-    state.deeds = deeds ? JSON.parse(deeds) : DEFAULT_DEEDS;
-    state.notes = notes ? JSON.parse(notes) : DEFAULT_NOTES;
-    state.events = events ? JSON.parse(events) : DEFAULT_EVENTS;
-    state.offices = offices ? JSON.parse(offices) : ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'];
-    state.webhookUrl = webhook || '';
-    state.theme = theme || 'light';
+    if (users) state.users = JSON.parse(users);
+    if (deeds) state.deeds = JSON.parse(deeds);
+    if (notes) state.notes = JSON.parse(notes);
+    if (events) state.events = JSON.parse(events);
+    if (offices) state.offices = JSON.parse(offices);
 
-    const input = document.getElementById('webhook-url-input');
-    if (input) input.value = state.webhookUrl;
-
-    renderOfficeTags();
+    renderUsersTable();
     populateDropdowns();
+    renderLoginUsers();
+    renderOfficeTags();
   }
 }
 
@@ -283,9 +291,9 @@ function syncDelete(collection, docId) {
   }
 }
 
-// Dynamic Webhook notification trigger
+// Trigger Make Webhook notification (directly using our WEBHOOK_URL constant)
 function triggerNotification(note, isNew = true) {
-  if (!state.webhookUrl) return;
+  if (!WEBHOOK_URL || WEBHOOK_URL.includes("YOUR_MAKE")) return;
 
   const assignedUser = state.users.find(u => u.id === note.assignedTo);
   const linkedDeed = state.deeds.find(d => d.id === note.deedId);
@@ -304,7 +312,7 @@ function triggerNotification(note, isNew = true) {
     editor: state.currentUser ? state.currentUser.name : 'Sistema'
   };
 
-  fetch(state.webhookUrl, {
+  fetch(WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -356,9 +364,6 @@ function renderLoginUsers() {
 
 function performLogin(user) {
   state.currentUser = user;
-  if (state.users.length === 0) {
-    state.users = DEFAULT_USERS;
-  }
   loginScreen.style.display = 'none';
   appContainer.style.display = 'flex';
   
@@ -681,7 +686,7 @@ function toggleChecklistItem(e, noteId, index) {
   if (note) {
     note.checklist[index].done = !note.checklist[index].done;
     syncSave('notes', noteId, note);
-    triggerNotification(note, false); // Webhook trigger on update
+    triggerNotification(note, false);
   }
 }
 
@@ -867,25 +872,6 @@ if (addOfficeForm) {
   });
 }
 
-// Webhook Save button handler
-const saveWebhookBtn = document.getElementById('save-webhook-btn');
-if (saveWebhookBtn) {
-  saveWebhookBtn.addEventListener('click', () => {
-    const input = document.getElementById('webhook-url-input');
-    const url = input.value.trim();
-    state.webhookUrl = url;
-    
-    if (useFirebase) {
-      db.collection('config').doc('webhook').set({ url: url })
-        .then(() => alert('Configuración de notificaciones guardada.'))
-        .catch(err => console.error(err));
-    } else {
-      localStorage.setItem('scriptura_webhook', url);
-      alert('Configuración de notificaciones guardada localmente.');
-    }
-  });
-}
-
 // Modal Form handling
 let currentChecklistItems = [];
 
@@ -1053,7 +1039,7 @@ noteForm.addEventListener('submit', (e) => {
 
   const data = { id, title, assignedTo, office, deedId, color, checklist, date };
   syncSave('notes', id, data);
-  triggerNotification(data, isNew); // Trigger Webhook notification
+  triggerNotification(data, isNew);
   noteModal.classList.remove('active');
 });
 
