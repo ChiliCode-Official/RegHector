@@ -376,7 +376,14 @@ if (loginNameInput) {
     const val = rawVal.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     loginErrorMsg.style.display = 'none';
-    if (val === 'hector' || val === 'hector omar' || val === 'hector omar lopez mora') {
+    
+    let potentialUser = state.users.find(u => u.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === val);
+    const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
+    if (hectorVariations.includes(val)) {
+      potentialUser = state.users.find(u => u.roles && u.roles.includes('boss')) || potentialUser;
+    }
+    
+    if (potentialUser && potentialUser.password && potentialUser.password.trim() !== '') {
       loginPasswordContainer.style.display = 'block';
       loginPwdInput.setAttribute('required', 'true');
     } else {
@@ -423,7 +430,7 @@ if (loginForm) {
       return;
     }
     
-    if (matchedUser.roles && matchedUser.roles.includes('boss')) {
+    if (matchedUser.password && matchedUser.password.trim() !== '') {
       if (loginPasswordContainer.style.display === 'none') {
         loginPasswordContainer.style.display = 'block';
         loginPwdInput.setAttribute('required', 'true');
