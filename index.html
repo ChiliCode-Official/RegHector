@@ -25,18 +25,21 @@
         <p style="font-size: 13px; opacity: 0.7; text-align: center; color: #8c8a82;">Notaría Pública - Registro y Asignación de Tareas</p>
       </div>
 
-      <form id="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
+      <div id="login-users-list-container" class="login-select-list" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+        <!-- Dynamically populated -->
+      </div>
+
+      <form id="login-password-form" style="width: 100%; display: none; flex-direction: column; gap: 16px;">
+        <h3 id="login-selected-name" style="text-align: center; font-weight: 600; color: var(--md-sys-color-primary); font-size: 18px;"></h3>
         <div class="input-field">
-          <label for="login-name-input">Nombre Completo</label>
-          <input type="text" id="login-name-input" placeholder="Escribe tu nombre..." required autocomplete="off" list="login-users-datalist">
-          <datalist id="login-users-datalist"></datalist>
-        </div>
-        <div class="input-field" id="login-password-container" style="display: none;">
-          <label for="login-pwd-input">Contraseña de Jefe</label>
-          <input type="password" id="login-pwd-input" placeholder="Contraseña...">
+          <label for="login-pwd-input">Contraseña de Acceso</label>
+          <input type="password" id="login-pwd-input" placeholder="Ingresa tu contraseña..." required>
         </div>
         <div id="login-error-msg" style="color: var(--md-sys-color-error); font-size: 13px; font-weight: 500; display: none;"></div>
-        <button type="submit" class="btn btn-primary" id="login-submit-btn" style="width: 100%;">Ingresar</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn" id="login-back-btn" style="flex: 1; background-color: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface);">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Ingresar</button>
+        </div>
       </form>
     </div>
   </div>
@@ -69,9 +72,7 @@
       </ul>
 
       <div class="nav-footer">
-        <button class="nav-item" id="theme-toggle" title="Cambiar Tema" style="width:40px; height:40px;">
-          <svg viewBox="0 0 24 24"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
-        </button>
+
         <div class="user-profile">
           <div class="user-avatar" id="active-user-avatar" title="Cerrar Sesión (Hacer clic)" style="cursor:pointer;">U</div>
         </div>
@@ -175,7 +176,12 @@
       <section id="admin-screen" class="screen">
         <div class="screen-header" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
           <h2 style="font-weight:700;">Equipo, Personal y Familia</h2>
-          <button class="btn btn-primary" id="add-user-btn">+ Registrar Personal</button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-text" id="theme-toggle" title="Cambiar Tema Oscuro/Claro" style="padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: var(--md-sys-color-surface-variant); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+            </button>
+            <button class="btn btn-primary" id="add-user-btn">+ Registrar Personal</button>
+          </div>
         </div>
 
         <div class="admin-card" style="margin-bottom: 24px;">

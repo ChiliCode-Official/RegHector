@@ -865,13 +865,18 @@ body {
   }
   .main-content {
     padding: 16px;
-    padding-bottom: 96px;
+    padding-bottom: 110px;
   }
   .floating-action-bar {
-    bottom: 84px;
+    bottom: 16px;
   }
   .dashboard-stats {
     gap: 20px;
+  }
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }
 /* Calendar Styling */

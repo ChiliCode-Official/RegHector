@@ -140,7 +140,13 @@ function loadData() {
     // 1. Listen to Users in real-time with self-healing boss verify
     db.collection('users').onSnapshot(snapshot => {
       const usersList = [];
-      snapshot.forEach(doc => usersList.push(doc.data()));
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.role && !data.roles) {
+          data.roles = [data.role]; // Backward compatibility
+        }
+        usersList.push(data);
+      });
       
       const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
       if (usersList.length === 0 || !bossInList) {
@@ -150,12 +156,13 @@ function loadData() {
         DEFAULT_USERS.forEach(u => {
           if (!u.roles.includes('boss')) db.collection('users').doc(u.id).set(u);
         });
-      } else {
-        state.users = usersList;
-        renderUsersTable();
-        populateDropdowns();
-        renderLoginUsers();
       }
+      
+      // Siempre actualizamos el estado, incluso si acabamos de forzar la creación (así el render inicial no se queda en blanco para el jefe nuevo)
+      state.users = usersList.length > 0 ? usersList : DEFAULT_USERS;
+      renderUsersTable();
+      populateDropdowns();
+      renderLoginUsers();
     }, error => {
       console.warn("Firestore 'users' failed to sync. Using defaults.", error.message);
     });
@@ -351,11 +358,14 @@ const globalFab = document.getElementById('global-fab');
 const activeUserAvatar = document.getElementById('active-user-avatar');
 
 // Login Form Elements
-const loginForm = document.getElementById('login-form');
-const loginNameInput = document.getElementById('login-name-input');
-const loginPasswordContainer = document.getElementById('login-password-container');
+const loginUsersListContainer = document.getElementById('login-users-list-container');
+const loginPasswordForm = document.getElementById('login-password-form');
+const loginSelectedName = document.getElementById('login-selected-name');
 const loginPwdInput = document.getElementById('login-pwd-input');
 const loginErrorMsg = document.getElementById('login-error-msg');
+const loginBackBtn = document.getElementById('login-back-btn');
+
+let selectedLoginUser = null;
 
 // Modals
 const deedModal = document.getElementById('deed-modal');
@@ -370,13 +380,38 @@ const speedDialMenu = document.getElementById('speed-dial-menu');
 
 // Auth Flow
 function renderLoginUsers() {
-  const datalist = document.getElementById('login-users-datalist');
-  if (datalist) {
-    datalist.innerHTML = '';
-    state.users.forEach(user => {
-      const opt = document.createElement('option');
-      opt.value = user.name;
-      datalist.appendChild(opt);
+  if (loginUsersListContainer) {
+    loginUsersListContainer.innerHTML = '';
+    const usersToRender = state.users.length > 0 ? state.users : DEFAULT_USERS;
+    usersToRender.forEach(user => {
+      const btn = document.createElement('button');
+      btn.className = 'login-option';
+      
+      const isBoss = user.roles && user.roles.includes('boss');
+      const roleName = isBoss ? 'Notario Público / Jefe' : (user.roles && user.roles.includes('personal') ? 'Personal' : 'Colaborador');
+      
+      btn.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:flex-start;">
+          <span style="font-weight:700; font-size:15px;">${user.name}</span>
+          <span style="font-size:11px; opacity:0.8; font-weight:500;">${roleName}</span>
+        </div>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      `;
+      
+      btn.addEventListener('click', () => {
+        selectedLoginUser = user;
+        if (isBoss) {
+          loginUsersListContainer.style.display = 'none';
+          loginPasswordForm.style.display = 'flex';
+          loginSelectedName.textContent = user.name;
+          loginErrorMsg.style.display = 'none';
+          loginPwdInput.value = '';
+          loginPwdInput.focus();
+        } else {
+          performLogin(user);
+        }
+      });
+      loginUsersListContainer.appendChild(btn);
     });
   }
 }
@@ -415,68 +450,31 @@ function performLogin(user) {
   renderOfficeTags();
 }
 
-// Handle login typing behavior
-loginNameInput.addEventListener('input', (e) => {
-  const val = e.target.value.trim().toLowerCase();
-  loginErrorMsg.style.display = 'none';
-  if (val === 'hector' || val === 'hector omar' || val === 'hector omar lopez mora') {
-    loginPasswordContainer.style.display = 'block';
-    loginPwdInput.setAttribute('required', 'true');
-  } else {
-    loginPasswordContainer.style.display = 'none';
-    loginPwdInput.removeAttribute('required');
-    loginPwdInput.value = '';
-  }
-});
-
-// Login Form Submit
-loginForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const nameVal = loginNameInput.value.trim();
-  const pwdVal = loginPwdInput.value.trim();
-  
-  let matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
-  
-  // Variaciones para el jefe
-  const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
-  if (hectorVariations.includes(nameVal.toLowerCase())) {
-    matchedUser = state.users.find(u => u.roles && u.roles.includes('boss'));
-  }
-  
-  // Fallback if Firestore has not loaded/synced yet
-  if (!matchedUser && state.users.length === 0) {
-    if (hectorVariations.includes(nameVal.toLowerCase())) {
-      matchedUser = DEFAULT_USERS.find(u => u.roles && u.roles.includes('boss'));
-    } else {
-      matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
-    }
-  }
-  
-  if (!matchedUser) {
-    loginErrorMsg.textContent = 'Usuario no registrado. Contacta al Administrador.';
-    loginErrorMsg.style.display = 'block';
-    return;
-  }
-  
-  if (matchedUser.roles && matchedUser.roles.includes('boss')) {
-    if (loginPasswordContainer.style.display === 'none') {
-      loginPasswordContainer.style.display = 'block';
-      loginPwdInput.setAttribute('required', 'true');
-      loginPwdInput.focus();
-      return;
-    }
+// Login Form Submit (Password Only)
+if(loginPasswordForm) {
+  loginPasswordForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!selectedLoginUser) return;
     
-    if (pwdVal === matchedUser.password) {
-      performLogin(matchedUser);
+    const pwdVal = loginPwdInput.value.trim();
+    if (pwdVal === selectedLoginUser.password) {
+      performLogin(selectedLoginUser);
     } else {
       loginErrorMsg.textContent = 'Contraseña incorrecta.';
       loginErrorMsg.style.display = 'block';
       loginPwdInput.focus();
     }
-  } else {
-    performLogin(matchedUser);
-  }
-});
+  });
+}
+
+if(loginBackBtn) {
+  loginBackBtn.addEventListener('click', () => {
+    selectedLoginUser = null;
+    loginPasswordForm.style.display = 'none';
+    loginUsersListContainer.style.display = 'flex';
+    loginErrorMsg.style.display = 'none';
+  });
+}
 
 // Logout Helper
 function handleLogout() {
@@ -520,6 +518,15 @@ function switchScreen(screenId) {
     }
   });
 
+  const filterBar = document.querySelector('.filter-bar');
+  if (filterBar) {
+    if (screenId === 'keep-screen') {
+      filterBar.style.display = 'flex';
+    } else {
+      filterBar.style.display = 'none';
+    }
+  }
+
   document.querySelectorAll('.floating-btn').forEach(btn => {
     btn.classList.remove('active');
   });
@@ -535,7 +542,7 @@ function switchScreen(screenId) {
   } else if (screenId === 'admin-screen') {
     const barAdmin = document.getElementById('bar-switch-admin');
     if (barAdmin) barAdmin.classList.add('active');
-    globalFab.style.display = 'none';
+    globalFab.style.display = 'flex';
   }
 }
 
@@ -555,6 +562,10 @@ themeToggle.addEventListener('click', () => {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   applyTheme();
   localStorage.setItem('scriptura_theme', state.theme);
+  
+  // Premium rotation animation
+  themeToggle.style.transform = `rotate(${state.theme === 'dark' ? '360deg' : '0deg'}) scale(1.15)`;
+  setTimeout(() => themeToggle.style.transform = `rotate(${state.theme === 'dark' ? '360deg' : '0deg'}) scale(1)`, 250);
 });
 
 function applyTheme() {
@@ -1238,27 +1249,28 @@ function populateDropdowns() {
 // Global floating '+' Speed Dial toggle logic
 globalFab.addEventListener('click', (e) => {
   e.stopPropagation();
-  const isHidden = speedDialMenu.style.display === 'none';
-  speedDialMenu.style.display = isHidden ? 'flex' : 'none';
+  const isActive = speedDialMenu.classList.contains('active');
   
-  // Animation
-  globalFab.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
-  if (isHidden) {
-    globalFab.style.transform = 'rotate(45deg)';
-  } else {
+  if (isActive) {
+    speedDialMenu.classList.remove('active');
     globalFab.style.transform = 'rotate(0deg)';
+  } else {
+    speedDialMenu.classList.add('active');
+    globalFab.style.transform = 'rotate(45deg)';
   }
+  globalFab.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
 });
 
 // Hide Speed Dial when clicking outside
 document.addEventListener('click', () => {
-  if (speedDialMenu) speedDialMenu.style.display = 'none';
+  if (speedDialMenu) speedDialMenu.classList.remove('active');
   if (globalFab) globalFab.style.transform = 'rotate(0deg)';
 });
 
 // Global Trigger Speed Dial handler
 window.triggerSpeedDial = function(screenId) {
-  speedDialMenu.style.display = 'none';
+  speedDialMenu.classList.remove('active');
+  if (globalFab) globalFab.style.transform = 'rotate(0deg)';
   switchScreen(screenId);
   if (screenId === 'deeds-screen') {
     openDeedModal();
