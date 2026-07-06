@@ -289,12 +289,12 @@
         <input type="hidden" id="note-id">
         <div class="input-field">
           <label for="note-title-input">Título</label>
-          <input type="text" id="note-title-input" placeholder="Título del pendiente..." required>
+          <input type="text" id="note-title-input" placeholder="Título del pendiente...">
         </div>
         
         <div class="input-field">
           <label for="note-assigned-input">Asignar a Colaborador</label>
-          <select id="note-assigned-input">
+          <select id="note-assigned-input" multiple style="height: auto; min-height: 80px;">
             <!-- Dynamically populated -->
           </select>
         </div>
@@ -376,7 +376,7 @@
         <div class="input-field">
           <label for="user-role-input">Rol / Tipo de Integrante</label>
           <select id="user-role-input">
-            <option value="colaborador">Colaborador / Personal / Chofer</option>
+            <option value="colaborador">Colaborador / Personal</option>
             <option value="boss">Jefe / Notario</option>
           </select>
         </div>

@@ -37,7 +37,7 @@ let state = {
   deeds: [],
   notes: [],
   events: [], // Calendar events
-  offices: ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'], // Custom notary offices tags
+  offices: ['Notaría 134', 'Notaría 160', 'Personal'], // Custom notary offices tags
   theme: 'light',
   currentFilter: 'all', // all, pending, completed, personal
   calendarDate: new Date(), // Selected month/year for display
@@ -62,7 +62,7 @@ const DEFAULT_NOTES = [
   {
     id: 'n1',
     title: 'Documentos Compraventa 14,301',
-    assignedTo: '1', // Mariano Sanchez
+    assignedTo: ['1'], // Mariano Sanchez
     deedId: 'd3',
     office: 'Notaría 134',
     color: '2',
@@ -76,7 +76,7 @@ const DEFAULT_NOTES = [
   {
     id: 'n2',
     title: 'Revisión Estatutos InnovaTech',
-    assignedTo: '2', // Paola Madrigal
+    assignedTo: ['2'], // Paola Madrigal
     deedId: 'd2',
     office: 'Notaría 160',
     color: '3',
@@ -90,7 +90,7 @@ const DEFAULT_NOTES = [
   {
     id: 'n3',
     title: 'Poder Notarial Urgente',
-    assignedTo: '3', // Daniel Villagran
+    assignedTo: ['3'], // Daniel Villagran
     deedId: 'd1',
     office: 'Personal',
     color: '4',
@@ -129,7 +129,7 @@ function loadData() {
   state.notes = DEFAULT_NOTES;
   state.events = DEFAULT_EVENTS;
   state.theme = localStorage.getItem('scriptura_theme') || 'light';
-  state.offices = ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'];
+  state.offices = ['Notaría 134', 'Notaría 160', 'Personal'];
 
   renderUsersTable();
   populateDropdowns();
@@ -389,9 +389,11 @@ function performLogin(user) {
   if (user.role === 'boss') {
     if (navAdmin) navAdmin.style.display = 'flex';
     if (barAdmin) barAdmin.style.display = 'flex';
+    document.getElementById('sd-task').style.display = 'flex';
   } else {
     if (navAdmin) navAdmin.style.display = 'none';
     if (barAdmin) barAdmin.style.display = 'none';
+    document.getElementById('sd-task').style.display = 'none';
   }
 
   switchScreen('deeds-screen');
@@ -409,7 +411,7 @@ function performLogin(user) {
 loginNameInput.addEventListener('input', (e) => {
   const val = e.target.value.trim().toLowerCase();
   loginErrorMsg.style.display = 'none';
-  if (val === 'hector omar' || val === 'hector omar lopez mora') {
+  if (val === 'hector' || val === 'hector omar' || val === 'hector omar lopez mora') {
     loginPasswordContainer.style.display = 'block';
     loginPwdInput.setAttribute('required', 'true');
   } else {
@@ -427,9 +429,19 @@ loginForm.addEventListener('submit', (e) => {
   
   let matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
   
+  // Variaciones para el jefe
+  const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
+  if (hectorVariations.includes(nameVal.toLowerCase())) {
+    matchedUser = state.users.find(u => u.role === 'boss');
+  }
+  
   // Fallback if Firestore has not loaded/synced yet
   if (!matchedUser && state.users.length === 0) {
-    matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+    if (hectorVariations.includes(nameVal.toLowerCase())) {
+      matchedUser = DEFAULT_USERS.find(u => u.role === 'boss');
+    } else {
+      matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+    }
   }
   
   if (!matchedUser) {
@@ -631,7 +643,13 @@ function renderNotes(filterText = '') {
     if (!matchesQuery) return false;
     
     // Auth filtering rules
-    if (!isBoss && note.assignedTo !== state.currentUser.id) return false;
+    if (!isBoss) {
+      if (Array.isArray(note.assignedTo)) {
+        if (!note.assignedTo.includes(state.currentUser.id)) return false;
+      } else {
+        if (note.assignedTo !== state.currentUser.id) return false;
+      }
+    }
 
     // Sub-pills filtering
     const isCompleted = note.checklist.length > 0 && note.checklist.every(item => item.done);
@@ -651,7 +669,9 @@ function renderNotes(filterText = '') {
     const card = document.createElement('div');
     card.className = `keep-card card-color-${note.color || '1'}`;
     
-    const assignedUser = state.users.find(u => u.id === note.assignedTo);
+    const assignedUsers = Array.isArray(note.assignedTo) 
+      ? note.assignedTo.map(id => state.users.find(u => u.id === id)).filter(Boolean)
+      : [state.users.find(u => u.id === note.assignedTo)].filter(Boolean);
     const linkedDeed = state.deeds.find(d => d.id === note.deedId);
     
     let checklistHtml = '';
@@ -668,12 +688,16 @@ function renderNotes(filterText = '') {
 
     const progressPercent = note.checklist.length > 0 ? (doneCount / note.checklist.length) * 100 : 0;
 
+    const avatarsHtml = assignedUsers.length > 0 
+      ? assignedUsers.map((u, i) => `<div class="assigned-avatar" style="border: 2px solid var(--md-sys-color-surface); margin-left: ${i > 0 ? '-10px' : '0'}; z-index: ${10-i};" title="${u.name}">${u.name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>`).join('')
+      : '<div class="assigned-avatar">?</div>';
+
     card.innerHTML = `
       <div class="keep-card-header">
         <span class="keep-card-category">${note.office || 'General'} ${linkedDeed ? `• Esc. #${linkedDeed.number}` : ''}</span>
         <div class="card-action-dot">···</div>
       </div>
-      <div class="keep-card-title">${note.title}</div>
+      <div class="keep-card-title">${note.title || '<em>Sin Título</em>'}</div>
       
       <div style="width:100%; height:4px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden; margin-top:-4px;">
         <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
@@ -685,18 +709,20 @@ function renderNotes(filterText = '') {
 
       <div class="card-footer">
         <div class="card-footer-info">
-          <span class="card-footer-name">${assignedUser ? assignedUser.name : 'Sin Asignar'}</span>
+          <span class="card-footer-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${assignedUsers.length > 0 ? assignedUsers.map(u => u.name).join(', ') : 'Sin Asignar'}</span>
           <span class="card-footer-date">${note.date || 'Hoy'}</span>
         </div>
-        <div class="assigned-avatar" title="${assignedUser ? assignedUser.name : 'Sin asignar'}">
-          ${assignedUser ? assignedUser.name.split(' ').map(n=>n[0]).join('') : '?'}
+        <div class="assigned-avatars-container" style="display: flex;">
+          ${avatarsHtml}
         </div>
       </div>
     `;
 
     card.addEventListener('click', (e) => {
       if (!e.target.closest('.checklist-item')) {
-        openNoteModal(note);
+        if (isBoss) {
+          openNoteModal(note);
+        }
       }
     });
 
@@ -931,7 +957,14 @@ function openNoteModal(note = null) {
     document.getElementById('note-modal-title').textContent = 'Editar Nota / Tarea';
     document.getElementById('note-id').value = note.id;
     document.getElementById('note-title-input').value = note.title;
-    document.getElementById('note-assigned-input').value = note.assignedTo;
+    
+    const assignedSelect = document.getElementById('note-assigned-input');
+    Array.from(assignedSelect.options).forEach(opt => {
+      opt.selected = Array.isArray(note.assignedTo) 
+        ? note.assignedTo.includes(opt.value)
+        : opt.value === note.assignedTo;
+    });
+
     document.getElementById('note-office-input').value = note.office || '';
     document.getElementById('note-deed-input').value = note.deedId || '';
     
@@ -949,7 +982,14 @@ function openNoteModal(note = null) {
   } else {
     document.getElementById('note-modal-title').textContent = 'Crear Nota / Tarea';
     document.getElementById('note-id').value = '';
-    document.getElementById('note-assigned-input').value = state.currentUser ? state.currentUser.id : '';
+    
+    const assignedSelect = document.getElementById('note-assigned-input');
+    Array.from(assignedSelect.options).forEach(opt => opt.selected = false);
+    if (state.currentUser) {
+      Array.from(assignedSelect.options).forEach(opt => {
+        if(opt.value === state.currentUser.id) opt.selected = true;
+      });
+    }
   }
   
   renderModalChecklist();
@@ -1049,7 +1089,8 @@ noteForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('note-id').value || 'n_' + Date.now();
   const title = document.getElementById('note-title-input').value;
-  const assignedTo = document.getElementById('note-assigned-input').value;
+  const assignedSelect = document.getElementById('note-assigned-input');
+  const assignedTo = Array.from(assignedSelect.selectedOptions).map(opt => opt.value);
   const office = document.getElementById('note-office-input').value;
   const deedId = document.getElementById('note-deed-input').value;
   
@@ -1057,6 +1098,15 @@ noteForm.addEventListener('submit', (e) => {
   const color = selectedColorDot ? selectedColorDot.getAttribute('data-color') : '1';
 
   const checklist = currentChecklistItems.filter(item => item.text.trim() !== '');
+
+  // Borrar si está vacío
+  if (title.trim() === '' && checklist.length === 0) {
+    if (document.getElementById('note-id').value) {
+      syncDelete('notes', id);
+    }
+    noteModal.classList.remove('active');
+    return;
+  }
 
   const today = new Date();
   const dateStr = `${today.getDate()}.${today.getMonth()+1}.${String(today.getFullYear()).slice(-2)}`;
@@ -1156,11 +1206,20 @@ globalFab.addEventListener('click', (e) => {
   e.stopPropagation();
   const isHidden = speedDialMenu.style.display === 'none';
   speedDialMenu.style.display = isHidden ? 'flex' : 'none';
+  
+  // Animation
+  globalFab.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
+  if (isHidden) {
+    globalFab.style.transform = 'rotate(45deg)';
+  } else {
+    globalFab.style.transform = 'rotate(0deg)';
+  }
 });
 
 // Hide Speed Dial when clicking outside
 document.addEventListener('click', () => {
   if (speedDialMenu) speedDialMenu.style.display = 'none';
+  if (globalFab) globalFab.style.transform = 'rotate(0deg)';
 });
 
 // Global Trigger Speed Dial handler
@@ -1200,6 +1259,46 @@ searchInput.addEventListener('input', (e) => {
   renderDeeds(query);
   renderNotes(query);
 });
+
+// --- Swipe Gestures for Mobile ---
+let touchStartX = 0;
+let touchEndX = 0;
+const screenOrder = ['deeds-screen', 'keep-screen', 'calendar-screen', 'admin-screen'];
+
+appContainer.addEventListener('touchstart', e => {
+  // Ignore swipe if touching a modal or horizontal scroll
+  if (e.target.closest('.modal-content') || e.target.closest('.user-table')) return;
+  touchStartX = e.changedTouches[0].screenX;
+}, {passive: true});
+
+appContainer.addEventListener('touchend', e => {
+  if (e.target.closest('.modal-content') || e.target.closest('.user-table')) return;
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipeGesture();
+}, {passive: true});
+
+function handleSwipeGesture() {
+  const swipeThreshold = 60;
+  if (Math.abs(touchEndX - touchStartX) > swipeThreshold) {
+    const currentActive = document.querySelector('.screen.active');
+    if (!currentActive) return;
+    let currentIndex = screenOrder.indexOf(currentActive.id);
+    
+    if (touchEndX < touchStartX) {
+      // Swipe left -> Next screen
+      if (currentIndex < screenOrder.length - 1) {
+        if (screenOrder[currentIndex + 1] === 'admin-screen' && state.currentUser?.role !== 'boss') return;
+        switchScreen(screenOrder[currentIndex + 1]);
+      }
+    } else if (touchEndX > touchStartX) {
+      // Swipe right -> Prev screen
+      if (currentIndex > 0) {
+        switchScreen(screenOrder[currentIndex - 1]);
+      }
+    }
+  }
+}
+// --------------------------------
 
 function init() {
   loadData();
