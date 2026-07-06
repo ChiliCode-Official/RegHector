@@ -123,6 +123,9 @@ const DEFAULT_EVENTS = [
 
 // Data Synchronizer (LocalStorage + Firebase)
 function loadData() {
+  const overlay = document.getElementById('skeleton-loader-overlay');
+  if (overlay) overlay.style.display = 'flex';
+
   // 1. Cargar de LocalStorage primero para evitar perdida de datos si Firebase falla
   const lUsers = localStorage.getItem('scriptura_users');
   const lDeeds = localStorage.getItem('scriptura_deeds');
@@ -144,6 +147,17 @@ function loadData() {
   renderOfficeTags();
 
   if (useFirebase) {
+    let isResolved = false;
+
+    // Timeout máximo de 2 segundos para el loader
+    setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        if (overlay) overlay.style.display = 'none';
+        console.warn("Firebase timeout: Mostrando UI después de 2 segundos de espera.");
+      }
+    }, 2000);
+
     // 1. Listen to Users in real-time
     db.collection('users').onSnapshot(snapshot => {
       const usersList = [];
@@ -169,8 +183,18 @@ function loadData() {
       renderUsersTable();
       populateDropdowns();
       renderLoginUsers();
+
+      if (!isResolved) {
+        isResolved = true;
+        if (overlay) overlay.style.display = 'none';
+      }
     }, error => {
-      console.warn("Firestore 'users' failed to sync. Using local data.", error.message);
+      console.error("Firebase error en users:", error);
+      alert("Error conectando a la Base de Datos Firebase. Revisar consola o permisos.");
+      if (!isResolved) {
+        isResolved = true;
+        if (overlay) overlay.style.display = 'none';
+      }
     });
 
     // 2. Listen to Deeds
@@ -187,7 +211,7 @@ function loadData() {
         updateMetrics();
       }
     }, error => {
-      console.warn("Firestore 'deeds' failed to sync. Using local data.", error.message);
+      console.error("Firebase error en deeds:", error.message);
     });
 
     // 3. Listen to Notes
@@ -203,7 +227,7 @@ function loadData() {
         updateMetrics();
       }
     }, error => {
-      console.warn("Firestore 'notes' failed to sync. Using local data.", error.message);
+      console.error("Firebase error en notes:", error.message);
     });
 
     // 4. Listen to Calendar Events
@@ -219,7 +243,7 @@ function loadData() {
         renderEventsForSelectedDay();
       }
     }, error => {
-      console.warn("Firestore 'events' failed to sync. Using local data.", error.message);
+      console.error("Firebase error en events:", error.message);
     });
 
     // 5. Listen to Offices tags
@@ -233,8 +257,10 @@ function loadData() {
         db.collection('config').doc('offices').set({ list: state.offices }).catch(e => {});
       }
     }, error => {
-      console.warn("Firestore 'offices config' failed to sync. Using local data.", error.message);
+      console.error("Firebase error en config:", error.message);
     });
+  } else {
+    if (overlay) overlay.style.display = 'none';
   }
 }
 
