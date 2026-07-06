@@ -10,7 +10,7 @@ const firebaseConfig = {
 };
 
 // Webhook Configuration for Make (Paste the URL copied from Make here)
-const WEBHOOK_URL = "https://hook.us1.make.com/dwyx9pxwndp11r693a652yxtkntx6xxt"; // Replace this with your generated Webhook URL if needed
+const WEBHOOK_URL = "https://hook.us2.make.com/qcfugoge9ei0foesqowebsohf9jlzmcg";
 
 // Check if Firebase is loaded and initialized
 let db = null;
