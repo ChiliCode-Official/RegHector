@@ -123,13 +123,20 @@ const DEFAULT_EVENTS = [
 
 // Data Synchronizer (LocalStorage + Firebase)
 function loadData() {
-  // Pre-load default state to guarantee login & autocomplete suggestions instantly
-  state.users = DEFAULT_USERS;
-  state.deeds = DEFAULT_DEEDS;
-  state.notes = DEFAULT_NOTES;
-  state.events = DEFAULT_EVENTS;
-  state.theme = localStorage.getItem('scriptura_theme') || 'light';
-  state.offices = ['Notaría 134', 'Notaría 160', 'Personal'];
+  // 1. Cargar de LocalStorage primero para evitar perdida de datos si Firebase falla
+  const lUsers = localStorage.getItem('scriptura_users');
+  const lDeeds = localStorage.getItem('scriptura_deeds');
+  const lNotes = localStorage.getItem('scriptura_notes');
+  const lEvents = localStorage.getItem('scriptura_events');
+  const lOffices = localStorage.getItem('scriptura_offices');
+  const lTheme = localStorage.getItem('scriptura_theme');
+
+  state.users = lUsers ? JSON.parse(lUsers) : DEFAULT_USERS;
+  state.deeds = lDeeds ? JSON.parse(lDeeds) : DEFAULT_DEEDS;
+  state.notes = lNotes ? JSON.parse(lNotes) : DEFAULT_NOTES;
+  state.events = lEvents ? JSON.parse(lEvents) : DEFAULT_EVENTS;
+  state.offices = lOffices ? JSON.parse(lOffices) : ['Notaría 134', 'Notaría 160', 'Personal'];
+  state.theme = lTheme || 'light';
 
   renderUsersTable();
   populateDropdowns();
@@ -137,7 +144,7 @@ function loadData() {
   renderOfficeTags();
 
   if (useFirebase) {
-    // 1. Listen to Users in real-time with self-healing boss verify
+    // 1. Listen to Users in real-time
     db.collection('users').onSnapshot(snapshot => {
       const usersList = [];
       snapshot.forEach(doc => {
@@ -150,21 +157,20 @@ function loadData() {
       
       const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
       if (usersList.length === 0 || !bossInList) {
-        // Enforce Hector exists in DB
-        const bossUser = DEFAULT_USERS.find(u => u.roles.includes('boss'));
-        db.collection('users').doc(bossUser.id).set(bossUser);
-        DEFAULT_USERS.forEach(u => {
-          if (!u.roles.includes('boss')) db.collection('users').doc(u.id).set(u);
+        // Si no hay datos (o falta el jefe) en Firebase, subimos los datos locales
+        state.users.forEach(u => {
+          db.collection('users').doc(u.id).set(u).catch(e => console.warn("Error saving user to DB:", e));
         });
+      } else {
+        state.users = usersList;
+        localStorage.setItem('scriptura_users', JSON.stringify(state.users));
       }
       
-      // Siempre actualizamos el estado, incluso si acabamos de forzar la creación (así el render inicial no se queda en blanco para el jefe nuevo)
-      state.users = usersList.length > 0 ? usersList : DEFAULT_USERS;
       renderUsersTable();
       populateDropdowns();
       renderLoginUsers();
     }, error => {
-      console.warn("Firestore 'users' failed to sync. Using defaults.", error.message);
+      console.warn("Firestore 'users' failed to sync. Using local data.", error.message);
     });
 
     // 2. Listen to Deeds
@@ -172,15 +178,16 @@ function loadData() {
       const deedsList = [];
       snapshot.forEach(doc => deedsList.push(doc.data()));
       if (deedsList.length === 0) {
-        DEFAULT_DEEDS.forEach(d => db.collection('deeds').doc(d.id).set(d));
+        state.deeds.forEach(d => db.collection('deeds').doc(d.id).set(d).catch(e => {}));
       } else {
         state.deeds = deedsList;
+        localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
         renderDeeds();
         populateDropdowns();
         updateMetrics();
       }
     }, error => {
-      console.warn("Firestore 'deeds' failed to sync. Using defaults.", error.message);
+      console.warn("Firestore 'deeds' failed to sync. Using local data.", error.message);
     });
 
     // 3. Listen to Notes
@@ -188,14 +195,15 @@ function loadData() {
       const notesList = [];
       snapshot.forEach(doc => notesList.push(doc.data()));
       if (notesList.length === 0) {
-        DEFAULT_NOTES.forEach(n => db.collection('notes').doc(n.id).set(n));
+        state.notes.forEach(n => db.collection('notes').doc(n.id).set(n).catch(e => {}));
       } else {
         state.notes = notesList;
+        localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
         renderNotes();
         updateMetrics();
       }
     }, error => {
-      console.warn("Firestore 'notes' failed to sync. Using defaults.", error.message);
+      console.warn("Firestore 'notes' failed to sync. Using local data.", error.message);
     });
 
     // 4. Listen to Calendar Events
@@ -203,46 +211,30 @@ function loadData() {
       const eventsList = [];
       snapshot.forEach(doc => eventsList.push(doc.data()));
       if (eventsList.length === 0) {
-        DEFAULT_EVENTS.forEach(e => db.collection('events').doc(e.id).set(e));
+        state.events.forEach(e => db.collection('events').doc(e.id).set(e).catch(e => {}));
       } else {
         state.events = eventsList;
+        localStorage.setItem('scriptura_events', JSON.stringify(state.events));
         renderCalendar();
         renderEventsForSelectedDay();
       }
     }, error => {
-      console.warn("Firestore 'events' failed to sync. Using defaults.", error.message);
+      console.warn("Firestore 'events' failed to sync. Using local data.", error.message);
     });
 
     // 5. Listen to Offices tags
     db.collection('config').doc('offices').onSnapshot(doc => {
       if (doc.exists) {
         state.offices = doc.data().list;
+        localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
         renderOfficeTags();
         populateDropdowns();
       } else {
-        db.collection('config').doc('offices').set({ list: state.offices });
+        db.collection('config').doc('offices').set({ list: state.offices }).catch(e => {});
       }
     }, error => {
-      console.warn("Firestore 'offices config' failed to sync. Using defaults.", error.message);
+      console.warn("Firestore 'offices config' failed to sync. Using local data.", error.message);
     });
-  } else {
-    // Local storage sync fallback
-    const users = localStorage.getItem('scriptura_users');
-    const deeds = localStorage.getItem('scriptura_deeds');
-    const notes = localStorage.getItem('scriptura_notes');
-    const events = localStorage.getItem('scriptura_events');
-    const offices = localStorage.getItem('scriptura_offices');
-
-    if (users) state.users = JSON.parse(users);
-    if (deeds) state.deeds = JSON.parse(deeds);
-    if (notes) state.notes = JSON.parse(notes);
-    if (events) state.events = JSON.parse(events);
-    if (offices) state.offices = JSON.parse(offices);
-
-    renderUsersTable();
-    populateDropdowns();
-    renderLoginUsers();
-    renderOfficeTags();
   }
 }
 
