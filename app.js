@@ -519,7 +519,7 @@ document.getElementById('bar-switch-admin').addEventListener('click', () => swit
 themeToggle.addEventListener('click', () => {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   applyTheme();
-  saveToStorage();
+  localStorage.setItem('scriptura_theme', state.theme);
 });
 
 function applyTheme() {
