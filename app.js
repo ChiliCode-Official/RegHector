@@ -34,13 +34,15 @@ let state = {
   deeds: [],
   notes: [],
   events: [], // Calendar events
+  offices: ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'], // Custom notary offices tags
+  webhookUrl: '', // Webhook URL for email/SMS notifications
   theme: 'light',
   currentFilter: 'all', // all, pending, completed
   calendarDate: new Date(), // Selected month/year for display
   selectedCalendarDate: new Date() // Selected day for events
 };
 
-// Initial Default Data (loaded if LocalStorage/Firebase is empty)
+// Initial Default Data
 const DEFAULT_USERS = [
   { id: '1', name: 'Mariano Sanchez', role: 'colaborador', password: '' },
   { id: '2', name: 'Paola Madrigal', role: 'colaborador', password: '' },
@@ -60,6 +62,7 @@ const DEFAULT_NOTES = [
     title: 'Documentos Compraventa 14,301',
     assignedTo: '1', // Mariano Sanchez
     deedId: 'd3',
+    office: 'Notaría 134',
     color: '2',
     date: '12.11.26',
     checklist: [
@@ -73,6 +76,7 @@ const DEFAULT_NOTES = [
     title: 'Revisión Estatutos InnovaTech',
     assignedTo: '2', // Paola Madrigal
     deedId: 'd2',
+    office: 'Notaría 160',
     color: '3',
     date: '15.11.26',
     checklist: [
@@ -86,6 +90,7 @@ const DEFAULT_NOTES = [
     title: 'Poder Notarial Urgente',
     assignedTo: '3', // Daniel Villagran
     deedId: 'd1',
+    office: 'Personal',
     color: '4',
     date: '22.11.26',
     checklist: [
@@ -171,6 +176,26 @@ function loadData() {
       }
     });
 
+    // 5. Listen to Offices tags
+    db.collection('config').doc('offices').onSnapshot(doc => {
+      if (doc.exists) {
+        state.offices = doc.data().list;
+        renderOfficeTags();
+        populateDropdowns();
+      } else {
+        db.collection('config').doc('offices').set({ list: state.offices });
+      }
+    });
+
+    // 6. Listen to Webhook URL settings
+    db.collection('config').doc('webhook').onSnapshot(doc => {
+      if (doc.exists) {
+        state.webhookUrl = doc.data().url;
+        const input = document.getElementById('webhook-url-input');
+        if (input) input.value = state.webhookUrl;
+      }
+    });
+
     // Theme loading
     state.theme = localStorage.getItem('scriptura_theme') || 'light';
   } else {
@@ -179,13 +204,23 @@ function loadData() {
     const deeds = localStorage.getItem('scriptura_deeds');
     const notes = localStorage.getItem('scriptura_notes');
     const events = localStorage.getItem('scriptura_events');
+    const offices = localStorage.getItem('scriptura_offices');
+    const webhook = localStorage.getItem('scriptura_webhook');
     const theme = localStorage.getItem('scriptura_theme');
 
     state.users = users ? JSON.parse(users) : DEFAULT_USERS;
     state.deeds = deeds ? JSON.parse(deeds) : DEFAULT_DEEDS;
     state.notes = notes ? JSON.parse(notes) : DEFAULT_NOTES;
     state.events = events ? JSON.parse(events) : DEFAULT_EVENTS;
+    state.offices = offices ? JSON.parse(offices) : ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'];
+    state.webhookUrl = webhook || '';
     state.theme = theme || 'light';
+
+    const input = document.getElementById('webhook-url-input');
+    if (input) input.value = state.webhookUrl;
+
+    renderOfficeTags();
+    populateDropdowns();
   }
 }
 
@@ -246,6 +281,36 @@ function syncDelete(collection, docId) {
     }
     updateMetrics();
   }
+}
+
+// Dynamic Webhook notification trigger
+function triggerNotification(note, isNew = true) {
+  if (!state.webhookUrl) return;
+
+  const assignedUser = state.users.find(u => u.id === note.assignedTo);
+  const linkedDeed = state.deeds.find(d => d.id === note.deedId);
+  const checklistStr = note.checklist.map(item => `- [${item.done ? 'x' : ' '}] ${item.text}`).join('\n');
+
+  const payload = {
+    event: isNew ? 'task_assigned' : 'task_updated',
+    task_id: note.id,
+    title: note.title,
+    assigned_name: assignedUser ? assignedUser.name : 'Sin Asignar',
+    deed_number: linkedDeed ? linkedDeed.number : 'N/A',
+    deed_title: linkedDeed ? linkedDeed.title : 'N/A',
+    office: note.office || 'General',
+    date: note.date,
+    checklist: checklistStr,
+    editor: state.currentUser ? state.currentUser.name : 'Sistema'
+  };
+
+  fetch(state.webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => console.log('Notification webhook triggered successfully'))
+  .catch(err => console.error('Error triggering notification webhook:', err));
 }
 
 // DOM Elements
@@ -315,6 +380,7 @@ function performLogin(user) {
   renderEventsForSelectedDay();
   renderUsersTable();
   populateDropdowns();
+  renderOfficeTags();
 }
 
 // Handle login typing behavior (auto show password if typing Hector Omar)
@@ -378,7 +444,6 @@ function handleLogout() {
   loginNameInput.focus();
 }
 
-// Clicking active avatar logs out
 activeUserAvatar.addEventListener('click', handleLogout);
 
 // Screen Switching Navigation
@@ -396,7 +461,7 @@ function switchScreen(screenId) {
   } else if (screenId === 'calendar-screen') {
     headerTitle.textContent = 'Calendario Notarial';
   } else if (screenId === 'admin-screen') {
-    headerTitle.textContent = 'Gestión de Personal';
+    headerTitle.textContent = 'Personal, Equipo y Oficinas';
   }
 
   navItems.forEach(item => {
@@ -407,7 +472,6 @@ function switchScreen(screenId) {
     }
   });
 
-  // Sync active states on floating bar buttons
   document.querySelectorAll('.floating-btn').forEach(btn => {
     btn.classList.remove('active');
   });
@@ -569,7 +633,7 @@ function renderNotes(filterText = '') {
 
     card.innerHTML = `
       <div class="keep-card-header">
-        <span class="keep-card-category">${linkedDeed ? `Esc. #${linkedDeed.number}` : 'NOTARÍA'}</span>
+        <span class="keep-card-category">${note.office || 'General'} ${linkedDeed ? `• Esc. #${linkedDeed.number}` : ''}</span>
         <div class="card-action-dot">···</div>
       </div>
       <div class="keep-card-title">${note.title}</div>
@@ -609,6 +673,7 @@ function toggleChecklistItem(e, noteId, index) {
   if (note) {
     note.checklist[index].done = !note.checklist[index].done;
     syncSave('notes', noteId, note);
+    triggerNotification(note, false); // Webhook trigger on update
   }
 }
 
@@ -619,7 +684,7 @@ function renderUsersTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${u.name}</strong></td>
-      <td>${u.role === 'boss' ? 'Jefe / Notario' : 'Colaborador'}</td>
+      <td>${u.role === 'boss' ? 'Jefe / Notario' : 'Personal / Colaborador'}</td>
       <td><code>${u.password || 'Sin Clave'}</code></td>
       <td>
         <button class="btn btn-text" onclick="openUserModal('${u.id}')" style="padding: 6px 12px; font-size: 13px;">Editar</button>
@@ -644,25 +709,20 @@ function renderCalendar() {
   
   monthYearLabel.textContent = `${MONTHS_SPANISH[currentMonth]} ${currentYear}`;
 
-  // First day of current month
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
-  // Total days in current month
   const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  // Draw empty cells for padding
   for (let i = 0; i < firstDayIndex; i++) {
     const emptyCell = document.createElement('div');
     emptyCell.className = 'calendar-day-cell empty';
     grid.appendChild(emptyCell);
   }
 
-  // Draw actual month day cells
   for (let day = 1; day <= totalDays; day++) {
     const cell = document.createElement('div');
     cell.className = 'calendar-day-cell';
     cell.textContent = day;
     
-    // Check if cell represents selected Calendar day
     const thisDateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const selectedDateStr = state.selectedCalendarDate.toISOString().split('T')[0];
     
@@ -670,13 +730,11 @@ function renderCalendar() {
       cell.classList.add('active');
     }
 
-    // Check if today
     const todayStr = new Date().toISOString().split('T')[0];
     if (thisDateStr === todayStr) {
       cell.classList.add('today');
     }
 
-    // Check if day has any events to draw indication dot
     const hasEvents = state.events.some(e => e.date === thisDateStr);
     if (hasEvents) {
       const dot = document.createElement('div');
@@ -707,8 +765,6 @@ function renderEventsForSelectedDay() {
   dayTitle.textContent = `Eventos - ${formattedDay}`;
 
   const dayEvents = state.events.filter(e => e.date === selectedStr);
-  
-  // Sort events by time
   dayEvents.sort((a, b) => a.time.localeCompare(b.time));
 
   if (dayEvents.length === 0) {
@@ -744,6 +800,84 @@ document.getElementById('next-month-btn').addEventListener('click', () => {
   renderCalendar();
 });
 
+// Render dynamic office tags list in Admin
+function renderOfficeTags() {
+  const container = document.getElementById('offices-list-tags');
+  if (!container) return;
+
+  container.innerHTML = '';
+  state.offices.forEach((office, index) => {
+    const tag = document.createElement('div');
+    tag.style.cssText = `
+      padding: 6px 12px;
+      background-color: var(--md-sys-color-surface-variant);
+      border-radius: var(--shape-small);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `;
+    tag.innerHTML = `
+      <span>${office}</span>
+      <span onclick="deleteOfficeTag(${index})" style="cursor:pointer; font-weight:700; color:var(--md-sys-color-error);">✕</span>
+    `;
+    container.appendChild(tag);
+  });
+}
+
+window.deleteOfficeTag = function(index) {
+  state.offices.splice(index, 1);
+  if (useFirebase) {
+    db.collection('config').doc('offices').set({ list: state.offices });
+  } else {
+    localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
+    renderOfficeTags();
+    populateDropdowns();
+  }
+};
+
+// Add Office submit handler
+const addOfficeForm = document.getElementById('add-office-form');
+if (addOfficeForm) {
+  addOfficeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('new-office-input');
+    const name = input.value.trim();
+    
+    if (name && !state.offices.includes(name)) {
+      state.offices.push(name);
+      if (useFirebase) {
+        db.collection('config').doc('offices').set({ list: state.offices });
+      } else {
+        localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
+        renderOfficeTags();
+        populateDropdowns();
+      }
+      input.value = '';
+    }
+  });
+}
+
+// Webhook Save button handler
+const saveWebhookBtn = document.getElementById('save-webhook-btn');
+if (saveWebhookBtn) {
+  saveWebhookBtn.addEventListener('click', () => {
+    const input = document.getElementById('webhook-url-input');
+    const url = input.value.trim();
+    state.webhookUrl = url;
+    
+    if (useFirebase) {
+      db.collection('config').doc('webhook').set({ url: url })
+        .then(() => alert('Configuración de notificaciones guardada.'))
+        .catch(err => console.error(err));
+    } else {
+      localStorage.setItem('scriptura_webhook', url);
+      alert('Configuración de notificaciones guardada localmente.');
+    }
+  });
+}
+
 // Modal Form handling
 let currentChecklistItems = [];
 
@@ -777,6 +911,7 @@ function openNoteModal(note = null) {
     document.getElementById('note-id').value = note.id;
     document.getElementById('note-title-input').value = note.title;
     document.getElementById('note-assigned-input').value = note.assignedTo;
+    document.getElementById('note-office-input').value = note.office || '';
     document.getElementById('note-deed-input').value = note.deedId || '';
     
     currentChecklistItems = [...note.checklist.map(item => ({...item}))];
@@ -804,12 +939,12 @@ function openUserModal(userId = null) {
   userForm.reset();
   if (userId) {
     const user = state.users.find(u => u.id === userId);
-    document.getElementById('user-modal-title').textContent = 'Editar Colaborador';
+    document.getElementById('user-modal-title').textContent = 'Editar Registro';
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-name-input').value = user.name;
     document.getElementById('user-password-input').value = user.password || '';
   } else {
-    document.getElementById('user-modal-title').textContent = 'Agregar Colaborador';
+    document.getElementById('user-modal-title').textContent = 'Registrar Integrante / Colaborador';
     document.getElementById('user-id').value = '';
   }
   userModal.classList.add('active');
@@ -831,7 +966,6 @@ function openEventModal(evt = null) {
   } else {
     document.getElementById('event-modal-title').textContent = 'Nueva Cita / Firma';
     document.getElementById('event-id').value = '';
-    // Pre-fill selected calendar day
     const selectedDateStr = state.selectedCalendarDate.toISOString().split('T')[0];
     document.getElementById('event-date-input').value = selectedDateStr;
   }
@@ -893,6 +1027,7 @@ noteForm.addEventListener('submit', (e) => {
   const id = document.getElementById('note-id').value || 'n_' + Date.now();
   const title = document.getElementById('note-title-input').value;
   const assignedTo = document.getElementById('note-assigned-input').value;
+  const office = document.getElementById('note-office-input').value;
   const deedId = document.getElementById('note-deed-input').value;
   
   const selectedColorDot = document.querySelector('#modal-color-selector .color-dot.selected');
@@ -906,8 +1041,11 @@ noteForm.addEventListener('submit', (e) => {
   const matchedNote = state.notes.find(n => n.id === id);
   const date = matchedNote ? matchedNote.date : dateStr;
 
-  const data = { id, title, assignedTo, deedId, color, checklist, date };
+  const isNew = !matchedNote;
+
+  const data = { id, title, assignedTo, office, deedId, color, checklist, date };
   syncSave('notes', id, data);
+  triggerNotification(data, isNew); // Trigger Webhook notification
   noteModal.classList.remove('active');
 });
 
@@ -930,7 +1068,6 @@ userForm.addEventListener('submit', (e) => {
   userModal.classList.remove('active');
 });
 
-// Event form Submit
 eventForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('event-id').value || 'e_' + Date.now();
@@ -962,6 +1099,17 @@ function populateDropdowns() {
       opt.value = u.id;
       opt.textContent = u.name;
       assignSelect.appendChild(opt);
+    });
+  }
+
+  const officeSelect = document.getElementById('note-office-input');
+  if (officeSelect) {
+    officeSelect.innerHTML = '';
+    state.offices.forEach(office => {
+      const opt = document.createElement('option');
+      opt.value = office;
+      opt.textContent = office;
+      officeSelect.appendChild(opt);
     });
   }
 
