@@ -1322,6 +1322,39 @@ function init() {
     Notification.requestPermission();
   }
   
+  const wipeBtn = document.getElementById('temp-wipe-btn');
+  if (wipeBtn) {
+    wipeBtn.addEventListener('click', () => {
+      if (confirm('¿ESTÁS ABSOLUTAMENTE SEGURO? Esto borrará TODA la base de datos de Firebase (usuarios, tareas, etc.) de forma irreversible.')) {
+        wipeBtn.textContent = 'Borrando...';
+        wipeBtn.disabled = true;
+        if (useFirebase) {
+          const collections = ['users', 'deeds', 'notes', 'events'];
+          let promises = [];
+          collections.forEach(coll => {
+            promises.push(db.collection(coll).get().then(snap => {
+              const batch = db.batch();
+              snap.forEach(doc => batch.delete(doc.ref));
+              return batch.commit();
+            }));
+          });
+          promises.push(db.collection('config').doc('offices').delete());
+          
+          Promise.all(promises).then(() => {
+            localStorage.clear();
+            alert('¡Base de datos borrada con éxito! Todo está en blanco de nuevo.');
+            window.location.reload();
+          }).catch(err => {
+            console.error(err);
+            alert('Hubo un error borrando la base de datos. Mira la consola.');
+            wipeBtn.textContent = '⚠️ RESETEAR TODA LA BASE DE DATOS ⚠️';
+            wipeBtn.disabled = false;
+          });
+        }
+      }
+    });
+  }
+
   loadData();
   
   const logged = localStorage.getItem('scriptura_logged_user');
