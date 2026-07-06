@@ -93,10 +93,15 @@ body.light-theme {
 body {
   background-color: var(--md-sys-color-background);
   color: var(--md-sys-color-on-background);
-  transition: background-color var(--transition-standard), color var(--transition-standard);
+  transition: background-color 0.5s cubic-bezier(0.2, 0, 0, 1), color 0.5s cubic-bezier(0.2, 0, 0, 1);
   min-height: 100vh;
   display: flex;
   overflow: hidden;
+}
+
+/* Aplicar transición a contenedores principales para un cambio de tema súper premium */
+.nav-drawer, .main-content, .screen, .modal-content, .admin-card, .keep-card, .deed-row, .top-bar {
+  transition: background-color 0.5s cubic-bezier(0.2, 0, 0, 1), border-color 0.5s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.5s cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* App Container */
@@ -941,3 +946,32 @@ body {
   color: var(--md-sys-color-primary);
   font-weight: 600;
 }
+
+/* Animaciones Premium M3 */
+#speed-dial-menu {
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(20px) scale(0.95);
+}
+
+#speed-dial-menu.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.speed-dial-item {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#speed-dial-menu.active .speed-dial-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#speed-dial-menu.active .speed-dial-item:nth-child(1) { transition-delay: 0.05s; }
+#speed-dial-menu.active .speed-dial-item:nth-child(2) { transition-delay: 0.1s; }
+#speed-dial-menu.active .speed-dial-item:nth-child(3) { transition-delay: 0.15s; }

@@ -46,10 +46,10 @@ let state = {
 
 // Initial Default Data
 const DEFAULT_USERS = [
-  { id: '1', name: 'Mariano Sanchez', role: 'colaborador', password: '' },
-  { id: '2', name: 'Paola Madrigal', role: 'colaborador', password: '' },
-  { id: '3', name: 'Daniel Villagran', role: 'colaborador', password: '' },
-  { id: 'boss', name: 'Hector Omar Lopez Mora', role: 'boss', password: '1234' }
+  { id: '1', name: 'Mariano Sanchez', roles: ['colaborador'], password: '' },
+  { id: '2', name: 'Paola Madrigal', roles: ['colaborador'], password: '' },
+  { id: '3', name: 'Daniel Villagran', roles: ['colaborador'], password: '' },
+  { id: 'boss', name: 'Hector Omar Lopez Mora', roles: ['boss'], password: '1234' }
 ];
 
 const DEFAULT_DEEDS = [
@@ -142,13 +142,13 @@ function loadData() {
       const usersList = [];
       snapshot.forEach(doc => usersList.push(doc.data()));
       
-      const bossInList = usersList.some(u => u.role === 'boss');
+      const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
       if (usersList.length === 0 || !bossInList) {
         // Enforce Hector exists in DB
-        const bossUser = DEFAULT_USERS.find(u => u.role === 'boss');
+        const bossUser = DEFAULT_USERS.find(u => u.roles.includes('boss'));
         db.collection('users').doc(bossUser.id).set(bossUser);
         DEFAULT_USERS.forEach(u => {
-          if (u.role !== 'boss') db.collection('users').doc(u.id).set(u);
+          if (!u.roles.includes('boss')) db.collection('users').doc(u.id).set(u);
         });
       } else {
         state.users = usersList;
@@ -322,6 +322,14 @@ function triggerNotification(note, isNew = true) {
     editor: state.currentUser ? state.currentUser.name : 'Sistema'
   };
 
+  // PWA Local Notification (Free)
+  if ('Notification' in window && Notification.permission === 'granted' && state.currentUser && state.currentUser.id !== assignedUser?.id) {
+    new Notification(isNew ? 'Nueva Tarea Asignada' : 'Tarea Actualizada', {
+      body: `${note.title} - ${assignedUser ? assignedUser.name : ''}`,
+      icon: 'icon-192.png'
+    });
+  }
+
   fetch(WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -386,7 +394,7 @@ function performLogin(user) {
   const navAdmin = document.getElementById('nav-admin-btn');
   const barAdmin = document.getElementById('bar-switch-admin');
   
-  if (user.role === 'boss') {
+  if (user.roles && user.roles.includes('boss')) {
     if (navAdmin) navAdmin.style.display = 'flex';
     if (barAdmin) barAdmin.style.display = 'flex';
     document.getElementById('sd-task').style.display = 'flex';
@@ -432,13 +440,13 @@ loginForm.addEventListener('submit', (e) => {
   // Variaciones para el jefe
   const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
   if (hectorVariations.includes(nameVal.toLowerCase())) {
-    matchedUser = state.users.find(u => u.role === 'boss');
+    matchedUser = state.users.find(u => u.roles && u.roles.includes('boss'));
   }
   
   // Fallback if Firestore has not loaded/synced yet
   if (!matchedUser && state.users.length === 0) {
     if (hectorVariations.includes(nameVal.toLowerCase())) {
-      matchedUser = DEFAULT_USERS.find(u => u.role === 'boss');
+      matchedUser = DEFAULT_USERS.find(u => u.roles && u.roles.includes('boss'));
     } else {
       matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
     }
@@ -450,7 +458,7 @@ loginForm.addEventListener('submit', (e) => {
     return;
   }
   
-  if (matchedUser.role === 'boss') {
+  if (matchedUser.roles && matchedUser.roles.includes('boss')) {
     if (loginPasswordContainer.style.display === 'none') {
       loginPasswordContainer.style.display = 'block';
       loginPwdInput.setAttribute('required', 'true');
@@ -564,7 +572,7 @@ function updateMetrics() {
   const pendingTasks = state.notes.flatMap(n => n.checklist).filter(item => !item.done).length;
   document.getElementById('stat-tasks-count').textContent = pendingTasks;
   
-  document.getElementById('stat-colabs-count').textContent = state.users.filter(u => u.role !== 'boss').length;
+  document.getElementById('stat-colabs-count').textContent = state.users.filter(u => !(u.roles || []).includes('boss')).length;
 
   const totalNotes = state.notes.length;
   const completedNotes = state.notes.filter(n => n.checklist.every(item => item.done)).length;
@@ -747,7 +755,7 @@ function renderUsersTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${u.name}</strong></td>
-      <td>${u.role === 'boss' ? 'Jefe / Notario' : 'Personal / Colaborador'}</td>
+      <td>${u.roles && u.roles.includes('boss') ? 'Jefe / Notario' : (u.roles || []).join(', ')}</td>
       <td><code>${u.password || 'Sin Clave'}</code></td>
       <td>
         <button class="btn btn-text" onclick="openUserModal('${u.id}')" style="padding: 6px 12px; font-size: 13px;">Editar</button>
@@ -978,10 +986,12 @@ function openNoteModal(note = null) {
       }
     });
 
+    document.getElementById('note-comments-input').value = note.comments || '';
     document.getElementById('delete-note-btn').style.display = 'block';
   } else {
     document.getElementById('note-modal-title').textContent = 'Crear Nota / Tarea';
     document.getElementById('note-id').value = '';
+    document.getElementById('note-comments-input').value = '';
     
     const assignedSelect = document.getElementById('note-assigned-input');
     Array.from(assignedSelect.options).forEach(opt => opt.selected = false);
@@ -992,6 +1002,15 @@ function openNoteModal(note = null) {
     }
   }
   
+  const isPersonal = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('personal');
+  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
+  
+  if (isPersonal || isBoss) {
+    document.getElementById('note-comments-input').removeAttribute('disabled');
+  } else {
+    document.getElementById('note-comments-input').setAttribute('disabled', 'true');
+  }
+
   renderModalChecklist();
   noteModal.classList.add('active');
 }
@@ -1004,11 +1023,17 @@ function openUserModal(userId = null) {
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-name-input').value = user.name;
     document.getElementById('user-password-input').value = user.password || '';
-    document.getElementById('user-role-input').value = user.role;
+    
+    const roleSelect = document.getElementById('user-role-input');
+    Array.from(roleSelect.options).forEach(opt => {
+      opt.selected = user.roles ? user.roles.includes(opt.value) : false;
+    });
   } else {
     document.getElementById('user-modal-title').textContent = 'Registrar Integrante / Colaborador';
     document.getElementById('user-id').value = '';
-    document.getElementById('user-role-input').value = 'colaborador';
+    const roleSelect = document.getElementById('user-role-input');
+    Array.from(roleSelect.options).forEach(opt => opt.selected = false);
+    roleSelect.options[0].selected = true; // colaborador default
   }
   userModal.classList.add('active');
 }
@@ -1093,6 +1118,7 @@ noteForm.addEventListener('submit', (e) => {
   const assignedTo = Array.from(assignedSelect.selectedOptions).map(opt => opt.value);
   const office = document.getElementById('note-office-input').value;
   const deedId = document.getElementById('note-deed-input').value;
+  const comments = document.getElementById('note-comments-input').value;
   
   const selectedColorDot = document.querySelector('#modal-color-selector .color-dot.selected');
   const color = selectedColorDot ? selectedColorDot.getAttribute('data-color') : '1';
@@ -1116,7 +1142,14 @@ noteForm.addEventListener('submit', (e) => {
 
   const isNew = !matchedNote;
 
-  const data = { id, title, assignedTo, office, deedId, color, checklist, date };
+  // Preserve other properties if editing as Personal (so they don't overwrite title/checklist if they somehow hacked the UI)
+  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
+  let data = { id, title, assignedTo, office, deedId, color, checklist, date, comments };
+  
+  if (!isBoss && matchedNote) {
+    data = { ...matchedNote, comments: comments }; // Only allow updating comments
+  }
+
   syncSave('notes', id, data);
   triggerNotification(data, isNew);
   noteModal.classList.remove('active');
@@ -1135,9 +1168,10 @@ userForm.addEventListener('submit', (e) => {
   const id = document.getElementById('user-id').value || 'u_' + Date.now();
   const name = document.getElementById('user-name-input').value;
   const password = document.getElementById('user-password-input').value;
-  const role = document.getElementById('user-role-input').value;
+  const roleSelect = document.getElementById('user-role-input');
+  const roles = Array.from(roleSelect.selectedOptions).map(opt => opt.value);
 
-  const data = { id, name, role, password };
+  const data = { id, name, roles, password };
   syncSave('users', id, data);
   userModal.classList.remove('active');
 });
@@ -1301,6 +1335,10 @@ function handleSwipeGesture() {
 // --------------------------------
 
 function init() {
+  if ('Notification' in window) {
+    Notification.requestPermission();
+  }
+  
   loadData();
   applyTheme();
   

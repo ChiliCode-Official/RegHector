@@ -214,10 +214,10 @@
     </main>
 
     <!-- Speed Dial Menu (appears when global-fab is clicked on mobile/desktop) -->
-    <div id="speed-dial-menu" style="display: none; position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 1001; background-color: #fff; border-radius: var(--shape-medium); box-shadow: var(--elevation-3); padding: 8px; flex-direction: column; gap: 4px; border: 1px solid var(--md-sys-color-outline);">
-      <button type="button" class="btn btn-text" id="sd-deed" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Nueva Escritura</button>
-      <button type="button" class="btn btn-text" id="sd-task" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg> Nueva Tarea</button>
-      <button type="button" class="btn btn-text" id="sd-event" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg> Nueva Cita / Firma</button>
+    <div id="speed-dial-menu" style="display: flex; position: fixed; bottom: 84px; left: 50%; z-index: 1001; background-color: var(--md-sys-color-surface); border-radius: var(--shape-medium); box-shadow: var(--elevation-3); padding: 8px; flex-direction: column; gap: 4px; border: 1px solid var(--md-sys-color-outline);">
+      <button type="button" class="btn btn-text speed-dial-item" id="sd-deed" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Nueva Escritura</button>
+      <button type="button" class="btn btn-text speed-dial-item" id="sd-task" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg> Nueva Tarea</button>
+      <button type="button" class="btn btn-text speed-dial-item" id="sd-event" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg> Nueva Cita / Firma</button>
     </div>
 
     <!-- Floating Action Bar Bottom Center (as seen in the mockup) -->
@@ -322,6 +322,11 @@
           <button type="button" class="btn btn-text" id="add-checklist-item-btn" style="align-self: flex-start; padding: 4px 8px; font-size: 13px;">+ Añadir elemento</button>
         </div>
 
+        <div class="input-field" id="note-comments-container">
+          <label for="note-comments-input">Sugerencias / Comentarios (Solo Personal)</label>
+          <textarea id="note-comments-input" rows="2" placeholder="Agrega una nota, comentario o recordatorio para el jefe..." disabled></textarea>
+        </div>
+
         <div class="input-field">
           <label>Color de Tarjeta</label>
           <div class="color-selector" id="modal-color-selector">
@@ -374,9 +379,10 @@
           <input type="text" id="user-password-input" placeholder="Contraseña visible para asignarle" required>
         </div>
         <div class="input-field">
-          <label for="user-role-input">Rol / Tipo de Integrante</label>
-          <select id="user-role-input">
-            <option value="colaborador">Colaborador / Personal</option>
+          <label for="user-role-input">Rol / Tipo de Integrante (Puedes seleccionar varios)</label>
+          <select id="user-role-input" multiple style="height: auto; min-height: 80px;">
+            <option value="colaborador">Colaborador / Equipo</option>
+            <option value="personal">Personal / Soporte</option>
             <option value="boss">Jefe / Notario</option>
           </select>
         </div>
