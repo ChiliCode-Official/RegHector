@@ -9,7 +9,7 @@ const firebaseConfig = {
   measurementId: "G-T3DHLBPYTB"
 };
 
-// Webhook Configuration for Make (Paste the URL copied from Make here)
+// Webhook Configuration for Make
 const WEBHOOK_URL = "https://hook.us2.make.com/qcfugoge9ei0foesqowebsohf9jlzmcg";
 
 // Check if Firebase is loaded and initialized
@@ -39,7 +39,7 @@ let state = {
   events: [], // Calendar events
   offices: ['Notaría 134', 'Notaría 160', 'Personal', 'Chofer'], // Custom notary offices tags
   theme: 'light',
-  currentFilter: 'all', // all, pending, completed
+  currentFilter: 'all', // all, pending, completed, personal
   calendarDate: new Date(), // Selected month/year for display
   selectedCalendarDate: new Date() // Selected day for events
 };
@@ -137,12 +137,19 @@ function loadData() {
   renderOfficeTags();
 
   if (useFirebase) {
-    // 1. Listen to Users in real-time with error handling
+    // 1. Listen to Users in real-time with self-healing boss verify
     db.collection('users').onSnapshot(snapshot => {
       const usersList = [];
       snapshot.forEach(doc => usersList.push(doc.data()));
-      if (usersList.length === 0) {
-        DEFAULT_USERS.forEach(u => db.collection('users').doc(u.id).set(u));
+      
+      const bossInList = usersList.some(u => u.role === 'boss');
+      if (usersList.length === 0 || !bossInList) {
+        // Enforce Hector exists in DB
+        const bossUser = DEFAULT_USERS.find(u => u.role === 'boss');
+        db.collection('users').doc(bossUser.id).set(bossUser);
+        DEFAULT_USERS.forEach(u => {
+          if (u.role !== 'boss') db.collection('users').doc(u.id).set(u);
+        });
       } else {
         state.users = usersList;
         renderUsersTable();
@@ -232,66 +239,69 @@ function loadData() {
   }
 }
 
+// Optimistic UI updates inside syncSave and syncDelete for instant responsiveness
 function syncSave(collection, docId, data) {
+  // Update local state instantly
+  if (collection === 'users') {
+    const index = state.users.findIndex(u => u.id === docId);
+    if (index !== -1) state.users[index] = data;
+    else state.users.push(data);
+    renderUsersTable();
+    populateDropdowns();
+    renderLoginUsers();
+    localStorage.setItem('scriptura_users', JSON.stringify(state.users));
+  } else if (collection === 'deeds') {
+    const index = state.deeds.findIndex(d => d.id === docId);
+    if (index !== -1) state.deeds[index] = data;
+    else state.deeds.push(data);
+    renderDeeds();
+    populateDropdowns();
+    localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
+  } else if (collection === 'notes') {
+    const index = state.notes.findIndex(n => n.id === docId);
+    if (index !== -1) state.notes[index] = data;
+    else state.notes.push(data);
+    renderNotes();
+    localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
+  } else if (collection === 'events') {
+    const index = state.events.findIndex(e => e.id === docId);
+    if (index !== -1) state.events[index] = data;
+    else state.events.push(data);
+    renderCalendar();
+    renderEventsForSelectedDay();
+    localStorage.setItem('scriptura_events', JSON.stringify(state.events));
+  }
+  updateMetrics();
+
+  // Firestore background save
   if (useFirebase) {
     db.collection(collection).doc(docId).set(data)
       .catch(err => console.error(`Error saving to Firestore (${collection}):`, err));
-  } else {
-    // Save locally
-    if (collection === 'users') {
-      const index = state.users.findIndex(u => u.id === docId);
-      if (index !== -1) state.users[index] = data;
-      else state.users.push(data);
-      localStorage.setItem('scriptura_users', JSON.stringify(state.users));
-      renderUsersTable();
-      populateDropdowns();
-      renderLoginUsers();
-    } else if (collection === 'deeds') {
-      const index = state.deeds.findIndex(d => d.id === docId);
-      if (index !== -1) state.deeds[index] = data;
-      else state.deeds.push(data);
-      localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
-      renderDeeds();
-      populateDropdowns();
-    } else if (collection === 'notes') {
-      const index = state.notes.findIndex(n => n.id === docId);
-      if (index !== -1) state.notes[index] = data;
-      else state.notes.push(data);
-      localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
-      renderNotes();
-    } else if (collection === 'events') {
-      const index = state.events.findIndex(e => e.id === docId);
-      if (index !== -1) state.events[index] = data;
-      else state.events.push(data);
-      localStorage.setItem('scriptura_events', JSON.stringify(state.events));
-      renderCalendar();
-      renderEventsForSelectedDay();
-    }
-    updateMetrics();
   }
 }
 
 function syncDelete(collection, docId) {
+  // Update local state instantly
+  if (collection === 'notes') {
+    state.notes = state.notes.filter(n => n.id !== docId);
+    renderNotes();
+    localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
+  } else if (collection === 'events') {
+    state.events = state.events.filter(e => e.id !== docId);
+    renderCalendar();
+    renderEventsForSelectedDay();
+    localStorage.setItem('scriptura_events', JSON.stringify(state.events));
+  }
+  updateMetrics();
+
+  // Firestore background delete
   if (useFirebase) {
     db.collection(collection).doc(docId).delete()
       .catch(err => console.error(`Error deleting from Firestore (${collection}):`, err));
-  } else {
-    // Delete locally
-    if (collection === 'notes') {
-      state.notes = state.notes.filter(n => n.id !== docId);
-      localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
-      renderNotes();
-    } else if (collection === 'events') {
-      state.events = state.events.filter(e => e.id !== docId);
-      localStorage.setItem('scriptura_events', JSON.stringify(state.events));
-      renderCalendar();
-      renderEventsForSelectedDay();
-    }
-    updateMetrics();
   }
 }
 
-// Trigger Make Webhook notification (directly using our WEBHOOK_URL constant)
+// Trigger Make Webhook notification
 function triggerNotification(note, isNew = true) {
   if (!WEBHOOK_URL || WEBHOOK_URL.includes("YOUR_MAKE")) return;
 
@@ -348,6 +358,7 @@ const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
 const eventModal = document.getElementById('event-modal');
 const eventForm = document.getElementById('event-form');
+const speedDialMenu = document.getElementById('speed-dial-menu');
 
 // Auth Flow
 function renderLoginUsers() {
@@ -366,6 +377,9 @@ function performLogin(user) {
   state.currentUser = user;
   loginScreen.style.display = 'none';
   appContainer.style.display = 'flex';
+  
+  // Save persistent session locally
+  localStorage.setItem('scriptura_logged_user', JSON.stringify(user));
   
   activeUserAvatar.textContent = user.name.charAt(0).toUpperCase();
   
@@ -391,7 +405,7 @@ function performLogin(user) {
   renderOfficeTags();
 }
 
-// Handle login typing behavior (auto show password if typing Hector Omar)
+// Handle login typing behavior
 loginNameInput.addEventListener('input', (e) => {
   const val = e.target.value.trim().toLowerCase();
   loginErrorMsg.style.display = 'none';
@@ -447,6 +461,7 @@ loginForm.addEventListener('submit', (e) => {
 // Logout Helper
 function handleLogout() {
   state.currentUser = null;
+  localStorage.removeItem('scriptura_logged_user'); // Clear persistent session
   appContainer.style.display = 'none';
   loginScreen.style.display = 'flex';
   
@@ -542,10 +557,12 @@ function updateMetrics() {
   const totalNotes = state.notes.length;
   const completedNotes = state.notes.filter(n => n.checklist.every(item => item.done)).length;
   const inProgressNotes = totalNotes - completedNotes;
+  const personalNotes = state.notes.filter(n => n.office === 'Personal').length;
 
   document.getElementById('badge-all').textContent = totalNotes;
   document.getElementById('badge-pending').textContent = inProgressNotes;
   document.getElementById('badge-completed').textContent = completedNotes;
+  document.getElementById('badge-personal').textContent = personalNotes;
 }
 
 // Filters
@@ -557,6 +574,9 @@ document.getElementById('filter-pending').addEventListener('click', (e) => {
 });
 document.getElementById('filter-completed').addEventListener('click', (e) => {
   setActiveFilter(e.target.closest('.pill-btn'), 'completed');
+});
+document.getElementById('filter-personal').addEventListener('click', (e) => {
+  setActiveFilter(e.target.closest('.pill-btn'), 'personal');
 });
 
 function setActiveFilter(element, filterType) {
@@ -609,11 +629,15 @@ function renderNotes(filterText = '') {
       note.checklist.some(item => item.text.toLowerCase().includes(filterText.toLowerCase()));
       
     if (!matchesQuery) return false;
+    
+    // Auth filtering rules
     if (!isBoss && note.assignedTo !== state.currentUser.id) return false;
 
+    // Sub-pills filtering
     const isCompleted = note.checklist.length > 0 && note.checklist.every(item => item.done);
     if (state.currentFilter === 'pending' && isCompleted) return false;
     if (state.currentFilter === 'completed' && !isCompleted) return false;
+    if (state.currentFilter === 'personal' && note.office !== 'Personal') return false;
 
     return true;
   });
@@ -839,14 +863,16 @@ function renderOfficeTags() {
   });
 }
 
+// Fixed: deleteOfficeTag now immediately does optimistic updates for responsive UI
 window.deleteOfficeTag = function(index) {
   state.offices.splice(index, 1);
+  renderOfficeTags();
+  populateDropdowns();
+  
   if (useFirebase) {
     db.collection('config').doc('offices').set({ list: state.offices });
   } else {
     localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
-    renderOfficeTags();
-    populateDropdowns();
   }
 };
 
@@ -860,12 +886,13 @@ if (addOfficeForm) {
     
     if (name && !state.offices.includes(name)) {
       state.offices.push(name);
+      renderOfficeTags();
+      populateDropdowns();
+      
       if (useFirebase) {
         db.collection('config').doc('offices').set({ list: state.offices });
       } else {
         localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
-        renderOfficeTags();
-        populateDropdowns();
       }
       input.value = '';
     }
@@ -937,9 +964,11 @@ function openUserModal(userId = null) {
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-name-input').value = user.name;
     document.getElementById('user-password-input').value = user.password || '';
+    document.getElementById('user-role-input').value = user.role;
   } else {
     document.getElementById('user-modal-title').textContent = 'Registrar Integrante / Colaborador';
     document.getElementById('user-id').value = '';
+    document.getElementById('user-role-input').value = 'colaborador';
   }
   userModal.classList.add('active');
 }
@@ -1056,8 +1085,9 @@ userForm.addEventListener('submit', (e) => {
   const id = document.getElementById('user-id').value || 'u_' + Date.now();
   const name = document.getElementById('user-name-input').value;
   const password = document.getElementById('user-password-input').value;
+  const role = document.getElementById('user-role-input').value;
 
-  const data = { id, name, role: 'colaborador', password };
+  const data = { id, name, role, password };
   syncSave('users', id, data);
   userModal.classList.remove('active');
 });
@@ -1121,16 +1151,35 @@ function populateDropdowns() {
   });
 }
 
-globalFab.addEventListener('click', () => {
-  const activeScreen = document.querySelector('.screen.active').id;
-  if (activeScreen === 'deeds-screen') {
+// Global floating '+' Speed Dial toggle logic
+globalFab.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isHidden = speedDialMenu.style.display === 'none';
+  speedDialMenu.style.display = isHidden ? 'flex' : 'none';
+});
+
+// Hide Speed Dial when clicking outside
+document.addEventListener('click', () => {
+  if (speedDialMenu) speedDialMenu.style.display = 'none';
+});
+
+// Global Trigger Speed Dial handler
+window.triggerSpeedDial = function(screenId) {
+  speedDialMenu.style.display = 'none';
+  switchScreen(screenId);
+  if (screenId === 'deeds-screen') {
     openDeedModal();
-  } else if (activeScreen === 'keep-screen') {
+  } else if (screenId === 'keep-screen') {
     openNoteModal();
-  } else if (activeScreen === 'calendar-screen') {
+  } else if (screenId === 'calendar-screen') {
     openEventModal();
   }
-});
+};
+
+// Wire Speed Dial actions directly
+document.getElementById('sd-deed').addEventListener('click', () => triggerSpeedDial('deeds-screen'));
+document.getElementById('sd-task').addEventListener('click', () => triggerSpeedDial('keep-screen'));
+document.getElementById('sd-event').addEventListener('click', () => triggerSpeedDial('calendar-screen'));
 
 document.getElementById('add-user-btn').addEventListener('click', () => {
   openUserModal();
@@ -1155,6 +1204,12 @@ searchInput.addEventListener('input', (e) => {
 function init() {
   loadData();
   applyTheme();
+  
+  // Persistent login session validation
+  const savedUser = localStorage.getItem('scriptura_logged_user');
+  if (savedUser) {
+    performLogin(JSON.parse(savedUser));
+  }
 }
 
 init();
