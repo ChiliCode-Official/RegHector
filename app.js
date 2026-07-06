@@ -420,13 +420,13 @@ if (loginForm) {
     const nameVal = loginNameInput.value.trim();
     const pwdVal = loginPwdInput.value.trim();
     
-    let matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+    const cleanNameVal = nameVal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    let matchedUser = state.users.find(u => u.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanNameVal);
     
     // Variaciones para el jefe (sin acentos)
-    const cleanNameVal = nameVal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
     if (hectorVariations.includes(cleanNameVal)) {
-      matchedUser = state.users.find(u => u.roles && u.roles.includes('boss'));
+      matchedUser = state.users.find(u => u.roles && u.roles.includes('boss')) || matchedUser;
     }
     
     // Eliminado el fallback local de DEFAULT_USERS.
