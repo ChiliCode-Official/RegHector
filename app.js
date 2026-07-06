@@ -381,7 +381,7 @@ if (loginNameInput) {
     
     loginErrorMsg.style.display = 'none';
     
-    let potentialUser = state.users.find(u => u.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === val);
+    let potentialUser = state.users.find(u => u.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === val);
     const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
     if (hectorVariations.includes(val)) {
       potentialUser = state.users.find(u => u.roles && u.roles.includes('boss')) || potentialUser;
@@ -402,7 +402,7 @@ if (loginNameInput) {
       if (val === '') {
         btn.style.display = index < 2 ? 'flex' : 'none';
       } else {
-        const btnText = btn.textContent.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const btnText = btn.textContent.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         if (btnText.includes(val)) {
           btn.style.display = 'flex';
         } else {
@@ -421,7 +421,7 @@ if (loginForm) {
     const pwdVal = loginPwdInput.value.trim();
     
     const cleanNameVal = nameVal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    let matchedUser = state.users.find(u => u.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanNameVal);
+    let matchedUser = state.users.find(u => u.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanNameVal);
     
     // Variaciones para el jefe (sin acentos)
     const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
@@ -1023,9 +1023,17 @@ function openUserModal(userId = null) {
     Array.from(roleSelect.options).forEach(opt => {
       opt.selected = user.roles ? user.roles.includes(opt.value) : false;
     });
+    
+    // Solo permitir eliminar si no es el jefe
+    if (user.roles && user.roles.includes('boss')) {
+      document.getElementById('delete-user-btn').style.display = 'none';
+    } else {
+      document.getElementById('delete-user-btn').style.display = 'block';
+    }
   } else {
     document.getElementById('user-modal-title').textContent = 'Registrar Integrante / Colaborador';
     document.getElementById('user-id').value = '';
+    document.getElementById('delete-user-btn').style.display = 'none';
     const roleSelect = document.getElementById('user-role-input');
     Array.from(roleSelect.options).forEach(opt => opt.selected = false);
     roleSelect.options[0].selected = true; // colaborador default
@@ -1161,7 +1169,7 @@ document.getElementById('delete-note-btn').addEventListener('click', () => {
 userForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('user-id').value || 'u_' + Date.now();
-  const name = document.getElementById('user-name-input').value;
+  const name = document.getElementById('user-name-input').value.trim();
   const password = document.getElementById('user-password-input').value;
   const roleSelect = document.getElementById('user-role-input');
   const roles = Array.from(roleSelect.selectedOptions).map(opt => opt.value);
@@ -1169,6 +1177,16 @@ userForm.addEventListener('submit', (e) => {
   const data = { id, name, roles, password };
   syncSave('users', id, data);
   userModal.classList.remove('active');
+});
+
+document.getElementById('delete-user-btn').addEventListener('click', () => {
+  const id = document.getElementById('user-id').value;
+  if (id) {
+    if (confirm('¿Estás seguro de eliminar a este colaborador? Ya no podrá acceder al sistema.')) {
+      syncDelete('users', id);
+      userModal.classList.remove('active');
+    }
+  }
 });
 
 eventForm.addEventListener('submit', (e) => {

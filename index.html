@@ -413,9 +413,12 @@
             <option value="boss">Jefe / Notario</option>
           </select>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+        <div class="modal-actions" style="justify-content: space-between; width: 100%;">
+          <button type="button" class="btn btn-text" id="delete-user-btn" style="color: var(--md-sys-color-error); display: none;">Eliminar</button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
         </div>
       </form>
     </div>
