@@ -36,97 +36,20 @@ let state = {
   users: [],
   deeds: [],
   notes: [],
-  events: [], // Calendar events
-  offices: ['Notaría 134', 'Notaría 160', 'Personal'], // Custom notary offices tags
+  events: [], 
+  offices: ['Notaría 134', 'Notaría 160', 'Personal'], 
   theme: 'light',
-  currentFilter: 'all', // all, pending, completed, personal
-  calendarDate: new Date(), // Selected month/year for display
-  selectedCalendarDate: new Date() // Selected day for events
+  currentFilter: 'all', 
+  calendarDate: new Date(), 
+  selectedCalendarDate: new Date() 
 };
-
-// Initial Default Data
-const DEFAULT_USERS = [
-  { id: '1', name: 'Mariano Sanchez', roles: ['colaborador'], password: '' },
-  { id: '2', name: 'Paola Madrigal', roles: ['colaborador'], password: '' },
-  { id: '3', name: 'Daniel Villagran', roles: ['colaborador'], password: '' },
-  { id: 'boss', name: 'Hector Omar Lopez Mora', roles: ['boss'], password: '1234' }
-];
-
-const DEFAULT_DEEDS = [
-  { id: 'd1', number: '14,302', title: 'Donación de Terreno Rústico', client: 'Juan Pérez García', status: 'pendiente', desc: 'Pendiente de traer certificado de no adeudo predial y firma del donatario.' },
-  { id: 'd2', number: '14,303', title: 'Constitución de Sociedad Anónima', client: 'InnovaTech S.A. de C.V.', status: 'revision', desc: 'Revisar estatutos sociales solicitados por el cliente. Especial atención en cláusulas de extranjeros.' },
-  { id: 'd3', number: '14,301', title: 'Compraventa de Casa Habitación', client: 'María Gómez y Pedro Estrada', status: 'firmado', desc: 'Trámite concluido con firmas recolectadas y pago de impuestos realizado.' }
-];
-
-const DEFAULT_NOTES = [
-  {
-    id: 'n1',
-    title: 'Documentos Compraventa 14,301',
-    assignedTo: ['1'], // Mariano Sanchez
-    deedId: 'd3',
-    office: 'Notaría 134',
-    color: '2',
-    date: '12.11.26',
-    checklist: [
-      { text: 'Certificado de libertad de gravamen', done: true },
-      { text: 'Identificaciones oficiales vigentes', done: true },
-      { text: 'Comprobante de pago del Impuesto Predial', done: true }
-    ]
-  },
-  {
-    id: 'n2',
-    title: 'Revisión Estatutos InnovaTech',
-    assignedTo: ['2'], // Paola Madrigal
-    deedId: 'd2',
-    office: 'Notaría 160',
-    color: '3',
-    date: '15.11.26',
-    checklist: [
-      { text: 'Redacción de Objeto Social', done: true },
-      { text: 'Validar RFC de socios fundadores', done: false },
-      { text: 'Agendar cita de firmas', done: false }
-    ]
-  },
-  {
-    id: 'n3',
-    title: 'Poder Notarial Urgente',
-    assignedTo: ['3'], // Daniel Villagran
-    deedId: 'd1',
-    office: 'Personal',
-    color: '4',
-    date: '22.11.26',
-    checklist: [
-      { text: 'Redactar facultades generales y especiales', done: false },
-      { text: 'Confirmar pago de honorarios', done: false }
-    ]
-  }
-];
-
-const DEFAULT_EVENTS = [
-  {
-    id: 'e1',
-    title: 'Firma de Donación de Terreno',
-    date: new Date().toISOString().split('T')[0], // Today
-    time: '11:00',
-    deedId: 'd1',
-    desc: 'Cita con Juan Pérez en sala de firmas A.'
-  },
-  {
-    id: 'e2',
-    title: 'Reunión InnovaTech Estatutos',
-    date: new Date().toISOString().split('T')[0], // Today
-    time: '16:00',
-    deedId: 'd2',
-    desc: 'Presentación de estatutos constitucionales modificados.'
-  }
-];
 
 // Data Synchronizer (LocalStorage + Firebase)
 function loadData() {
   const overlay = document.getElementById('skeleton-loader-overlay');
   if (overlay) overlay.style.display = 'flex';
 
-  // 1. Cargar de LocalStorage primero para evitar perdida de datos si Firebase falla
+  // Solo usamos LocalStorage como fallback offline temporal si Firebase tarda, pero NO como fuente de verdad ni para emular.
   const lUsers = localStorage.getItem('scriptura_users');
   const lDeeds = localStorage.getItem('scriptura_deeds');
   const lNotes = localStorage.getItem('scriptura_notes');
@@ -134,10 +57,10 @@ function loadData() {
   const lOffices = localStorage.getItem('scriptura_offices');
   const lTheme = localStorage.getItem('scriptura_theme');
 
-  state.users = lUsers ? JSON.parse(lUsers) : DEFAULT_USERS;
-  state.deeds = lDeeds ? JSON.parse(lDeeds) : DEFAULT_DEEDS;
-  state.notes = lNotes ? JSON.parse(lNotes) : DEFAULT_NOTES;
-  state.events = lEvents ? JSON.parse(lEvents) : DEFAULT_EVENTS;
+  state.users = lUsers ? JSON.parse(lUsers) : [];
+  state.deeds = lDeeds ? JSON.parse(lDeeds) : [];
+  state.notes = lNotes ? JSON.parse(lNotes) : [];
+  state.events = lEvents ? JSON.parse(lEvents) : [];
   state.offices = lOffices ? JSON.parse(lOffices) : ['Notaría 134', 'Notaría 160', 'Personal'];
   state.theme = lTheme || 'light';
 
@@ -148,40 +71,28 @@ function loadData() {
 
   if (useFirebase) {
     let isResolved = false;
-
-    // Timeout máximo de 2 segundos para el loader
     setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
         if (overlay) overlay.style.display = 'none';
-        console.warn("Firebase timeout: Mostrando UI después de 2 segundos de espera.");
       }
     }, 2000);
 
     // 1. Listen to Users in real-time
     db.collection('users').onSnapshot(snapshot => {
-      if (snapshot.empty) {
-        const seedUsers = state.users.length > 0 ? state.users : DEFAULT_USERS;
-        seedUsers.forEach(u => db.collection('users').doc(u.id).set(u).catch(() => {}));
-        state.users = seedUsers;
-      } else {
+      if (!snapshot.empty) {
         const usersList = [];
         snapshot.forEach(doc => {
           const data = doc.data();
           if (data.role && !data.roles) data.roles = [data.role];
           usersList.push(data);
         });
-        
-        const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
-        if (!bossInList) {
-          const bossUser = DEFAULT_USERS.find(u => u.roles.includes('boss'));
-          usersList.push(bossUser);
-          db.collection('users').doc(bossUser.id).set(bossUser).catch(() => {});
-        }
         state.users = usersList;
+        localStorage.setItem('scriptura_users', JSON.stringify(state.users));
+      } else {
+        state.users = [];
       }
       
-      localStorage.setItem('scriptura_users', JSON.stringify(state.users));
       renderUsersTable();
       populateDropdowns();
       renderLoginUsers();
@@ -191,7 +102,6 @@ function loadData() {
         if (overlay) overlay.style.display = 'none';
       }
     }, error => {
-      console.error("Firebase error en users:", error);
       if (!isResolved) {
         isResolved = true;
         if (overlay) overlay.style.display = 'none';
@@ -200,71 +110,55 @@ function loadData() {
 
     // 2. Listen to Deeds
     db.collection('deeds').onSnapshot(snapshot => {
-      if (snapshot.empty) {
-        const seedDeeds = state.deeds.length > 0 ? state.deeds : DEFAULT_DEEDS;
-        seedDeeds.forEach(d => db.collection('deeds').doc(d.id).set(d).catch(() => {}));
-        state.deeds = seedDeeds;
-      } else {
+      if (!snapshot.empty) {
         const deedsList = [];
         snapshot.forEach(doc => deedsList.push(doc.data()));
         state.deeds = deedsList;
+        localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
+      } else {
+        state.deeds = [];
       }
-      localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
       renderDeeds();
       populateDropdowns();
       updateMetrics();
-    }, error => {
-      console.error("Firebase error en deeds:", error.message);
     });
 
     // 3. Listen to Notes
     db.collection('notes').onSnapshot(snapshot => {
-      if (snapshot.empty) {
-        const seedNotes = state.notes.length > 0 ? state.notes : DEFAULT_NOTES;
-        seedNotes.forEach(n => db.collection('notes').doc(n.id).set(n).catch(() => {}));
-        state.notes = seedNotes;
-      } else {
+      if (!snapshot.empty) {
         const notesList = [];
         snapshot.forEach(doc => notesList.push(doc.data()));
         state.notes = notesList;
+        localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
+      } else {
+        state.notes = [];
       }
-      localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
       renderNotes();
       updateMetrics();
-    }, error => {
-      console.error("Firebase error en notes:", error.message);
     });
 
     // 4. Listen to Calendar Events
     db.collection('events').onSnapshot(snapshot => {
-      if (snapshot.empty) {
-        const seedEvents = state.events.length > 0 ? state.events : DEFAULT_EVENTS;
-        seedEvents.forEach(e => db.collection('events').doc(e.id).set(e).catch(() => {}));
-        state.events = seedEvents;
-      } else {
+      if (!snapshot.empty) {
         const eventsList = [];
         snapshot.forEach(doc => eventsList.push(doc.data()));
         state.events = eventsList;
+        localStorage.setItem('scriptura_events', JSON.stringify(state.events));
+      } else {
+        state.events = [];
       }
-      localStorage.setItem('scriptura_events', JSON.stringify(state.events));
       renderCalendar();
       renderEventsForSelectedDay();
-    }, error => {
-      console.error("Firebase error en events:", error.message);
     });
 
     // 5. Listen to Offices tags
     db.collection('config').doc('offices').onSnapshot(doc => {
       if (doc.exists) {
-        state.offices = doc.data().list;
+        state.offices = doc.data().list || ['Notaría 134', 'Notaría 160', 'Personal'];
         localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
         renderOfficeTags();
         populateDropdowns();
-      } else {
-        db.collection('config').doc('offices').set({ list: state.offices }).catch(() => {});
       }
-    }, error => {
-      console.error("Firebase error en config:", error.message);
     });
   } else {
     if (overlay) overlay.style.display = 'none';
@@ -444,15 +338,16 @@ function performLogin(user) {
   
   const navAdmin = document.getElementById('nav-admin-btn');
   const barAdmin = document.getElementById('bar-switch-admin');
+  const sdTask = document.getElementById('sd-task');
   
   if (user.roles && user.roles.includes('boss')) {
     if (navAdmin) navAdmin.style.display = 'flex';
     if (barAdmin) barAdmin.style.display = 'flex';
-    document.getElementById('sd-task').style.display = 'flex';
+    if (sdTask) sdTask.style.display = 'flex';
   } else {
     if (navAdmin) navAdmin.style.display = 'none';
     if (barAdmin) barAdmin.style.display = 'none';
-    document.getElementById('sd-task').style.display = 'none';
+    if (sdTask) sdTask.style.display = 'none';
   }
 
   switchScreen('deeds-screen');
@@ -652,13 +547,13 @@ function applyTheme() {
 function updateMetrics() {
   document.getElementById('stat-deeds-count').textContent = state.deeds.length;
   
-  const pendingTasks = state.notes.flatMap(n => n.checklist).filter(item => !item.done).length;
+  const pendingTasks = state.notes.flatMap(n => n.checklist || []).filter(item => !item.done).length;
   document.getElementById('stat-tasks-count').textContent = pendingTasks;
   
   document.getElementById('stat-colabs-count').textContent = state.users.filter(u => !(u.roles || []).includes('boss')).length;
 
   const totalNotes = state.notes.length;
-  const completedNotes = state.notes.filter(n => n.checklist.every(item => item.done)).length;
+  const completedNotes = state.notes.filter(n => (n.checklist || []).length > 0 && (n.checklist || []).every(item => item.done)).length;
   const inProgressNotes = totalNotes - completedNotes;
   const personalNotes = state.notes.filter(n => n.office === 'Personal').length;
 
@@ -728,8 +623,8 @@ function renderNotes(filterText = '') {
   const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
   const filtered = state.notes.filter(note => {
     const matchesQuery = 
-      note.title.toLowerCase().includes(filterText.toLowerCase()) ||
-      note.checklist.some(item => item.text.toLowerCase().includes(filterText.toLowerCase()));
+      (note.title || '').toLowerCase().includes(filterText.toLowerCase()) ||
+      (note.checklist || []).some(item => (item.text || '').toLowerCase().includes(filterText.toLowerCase()));
       
     if (!matchesQuery) return false;
     
@@ -767,7 +662,8 @@ function renderNotes(filterText = '') {
     
     let checklistHtml = '';
     let doneCount = 0;
-    note.checklist.forEach((item, index) => {
+    const checklistArr = note.checklist || [];
+    checklistArr.forEach((item, index) => {
       if (item.done) doneCount++;
       checklistHtml += `
         <li class="checklist-item ${item.done ? 'done' : ''}" onclick="toggleChecklistItem(event, '${note.id}', ${index})">
@@ -777,7 +673,7 @@ function renderNotes(filterText = '') {
       `;
     });
 
-    const progressPercent = note.checklist.length > 0 ? (doneCount / note.checklist.length) * 100 : 0;
+    const progressPercent = checklistArr.length > 0 ? (doneCount / checklistArr.length) * 100 : 0;
 
     const avatarsHtml = assignedUsers.length > 0 
       ? assignedUsers.map((u, i) => `<div class="assigned-avatar" style="border: 2px solid var(--md-sys-color-surface); margin-left: ${i > 0 ? '-10px' : '0'}; z-index: ${10-i};" title="${u.name}">${u.name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>`).join('')
@@ -1426,16 +1322,25 @@ function init() {
     Notification.requestPermission();
   }
   
-  renderLoginUsers(); // Render immediately using DEFAULT_USERS until Firebase syncs
-  
   loadData();
-  applyTheme();
   
-  // Persistent login session validation
-  const savedUser = localStorage.getItem('scriptura_logged_user');
-  if (savedUser) {
-    performLogin(JSON.parse(savedUser));
+  const logged = localStorage.getItem('scriptura_logged_user');
+  if (logged) {
+    const user = JSON.parse(logged);
+    // Optimistic login: we assume the user exists to prevent flash of login screen.
+    // If Firebase later explicitly removes them, the onSnapshot for users can handle it.
+    
+    // Asignamos al currentUser para que los renderizados no fallen
+    state.currentUser = user;
+    
+    // Verificamos si existe en caché local (state.users ya cargado sincrónicamente)
+    const localUser = state.users.find(u => u.id === user.id);
+    
+    // Usamos el usuario de caché si existe (por si cambió el rol localmente), sino el guardado
+    performLogin(localUser || user);
   }
+  
+  applyTheme();
 }
 
 init();

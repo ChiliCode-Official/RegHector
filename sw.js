@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scriptura-v5';
+const CACHE_NAME = 'scriptura-v6';
 const ASSETS = [
   './',
   './index.html',
