@@ -10,10 +10,10 @@ let state = {
 
 // Initial Default Data (loaded if LocalStorage is empty)
 const DEFAULT_USERS = [
-  { id: '1', name: 'Mariano Sanchez', role: 'colaborador', password: '1111' },
-  { id: '2', name: 'Paola Madrigal', role: 'colaborador', password: '2222' },
-  { id: '3', name: 'Daniel Villagran', role: 'colaborador', password: '3333' },
-  { id: 'boss', name: 'Jefe (Notario)', role: 'boss', password: '1234' }
+  { id: '1', name: 'Mariano Sanchez', role: 'colaborador', password: '' },
+  { id: '2', name: 'Paola Madrigal', role: 'colaborador', password: '' },
+  { id: '3', name: 'Daniel Villagran', role: 'colaborador', password: '' },
+  { id: 'boss', name: 'Hector Omar', role: 'boss', password: '1234' }
 ];
 
 const DEFAULT_DEEDS = [
@@ -70,7 +70,19 @@ function loadFromStorage() {
   const notes = localStorage.getItem('scriptura_notes');
   const theme = localStorage.getItem('scriptura_theme');
 
-  state.users = users ? JSON.parse(users) : DEFAULT_USERS;
+  // Load existing, or default to Hector Omar and correct default collaborators
+  if (users) {
+    state.users = JSON.parse(users);
+    // Backward compatibility: ensure Hector Omar is the boss in storage
+    const bossUser = state.users.find(u => u.role === 'boss');
+    if (bossUser && bossUser.name !== 'Hector Omar') {
+      bossUser.name = 'Hector Omar';
+      bossUser.password = '1234';
+    }
+  } else {
+    state.users = DEFAULT_USERS;
+  }
+
   state.deeds = deeds ? JSON.parse(deeds) : DEFAULT_DEEDS;
   state.notes = notes ? JSON.parse(notes) : DEFAULT_NOTES;
   state.theme = theme || 'light';
@@ -86,7 +98,6 @@ function saveToStorage() {
 // DOM Elements
 const loginScreen = document.getElementById('login-screen');
 const appContainer = document.getElementById('app-container');
-const loginUsersList = document.getElementById('login-users-list');
 const deedsContainer = document.getElementById('deeds-container');
 const notesContainer = document.getElementById('notes-container');
 const usersTableBody = document.getElementById('users-table-body');
@@ -96,43 +107,22 @@ const globalFab = document.getElementById('global-fab');
 const activeUserAvatar = document.getElementById('active-user-avatar');
 const logoutBtn = document.getElementById('logout-btn');
 
+// Login Form Elements
+const loginForm = document.getElementById('login-form');
+const loginNameInput = document.getElementById('login-name-input');
+const loginPasswordContainer = document.getElementById('login-password-container');
+const loginPwdInput = document.getElementById('login-pwd-input');
+const loginErrorMsg = document.getElementById('login-error-msg');
+
 // Modals
 const deedModal = document.getElementById('deed-modal');
 const deedForm = document.getElementById('deed-form');
 const noteModal = document.getElementById('note-modal');
 const noteForm = document.getElementById('note-form');
-const passwordModal = document.getElementById('password-modal');
 const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
 
 // Auth Flow
-function renderLoginUsers() {
-  loginUsersList.innerHTML = '';
-  state.users.forEach(user => {
-    const btn = document.createElement('button');
-    btn.className = 'login-option';
-    btn.innerHTML = `
-      <span>${user.name}</span>
-      <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">${user.role.toUpperCase()}</span>
-    `;
-    btn.addEventListener('click', () => handleLoginSelect(user));
-    loginUsersList.appendChild(btn);
-  });
-}
-
-let selectedUserForLogin = null;
-
-function handleLoginSelect(user) {
-  selectedUserForLogin = user;
-  if (user.role === 'boss') {
-    document.getElementById('boss-password-input').value = '';
-    document.getElementById('password-error').style.display = 'none';
-    passwordModal.classList.add('active');
-  } else {
-    performLogin(user);
-  }
-}
-
 function performLogin(user) {
   state.currentUser = user;
   loginScreen.style.display = 'none';
@@ -162,19 +152,56 @@ function performLogin(user) {
   populateDropdowns();
 }
 
-// Password submission
-document.getElementById('password-submit-btn').addEventListener('click', () => {
-  const pwdInput = document.getElementById('boss-password-input').value;
-  if (pwdInput === selectedUserForLogin.password) {
-    passwordModal.classList.remove('active');
-    performLogin(selectedUserForLogin);
+// Handle login typing behavior (auto show password if typing Hector Omar)
+loginNameInput.addEventListener('input', (e) => {
+  const val = e.target.value.trim().toLowerCase();
+  loginErrorMsg.style.display = 'none';
+  if (val === 'hector omar') {
+    loginPasswordContainer.style.display = 'block';
+    loginPwdInput.setAttribute('required', 'true');
   } else {
-    document.getElementById('password-error').style.display = 'block';
+    loginPasswordContainer.style.display = 'none';
+    loginPwdInput.removeAttribute('required');
+    loginPwdInput.value = '';
   }
 });
 
-document.getElementById('password-cancel-btn').addEventListener('click', () => {
-  passwordModal.classList.remove('active');
+// Login Form Submit
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const nameVal = loginNameInput.value.trim();
+  const pwdVal = loginPwdInput.value.trim();
+  
+  // Find matching user (case-insensitive)
+  const matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+  
+  if (!matchedUser) {
+    loginErrorMsg.textContent = 'Usuario no registrado. Contacta al Administrador.';
+    loginErrorMsg.style.display = 'block';
+    return;
+  }
+  
+  if (matchedUser.role === 'boss') {
+    // If password container is somehow hidden, show it
+    if (loginPasswordContainer.style.display === 'none') {
+      loginPasswordContainer.style.display = 'block';
+      loginPwdInput.setAttribute('required', 'true');
+      loginPwdInput.focus();
+      return;
+    }
+    
+    // Validate boss password
+    if (pwdVal === matchedUser.password) {
+      performLogin(matchedUser);
+    } else {
+      loginErrorMsg.textContent = 'Contraseña incorrecta.';
+      loginErrorMsg.style.display = 'block';
+      loginPwdInput.focus();
+    }
+  } else {
+    // Collaborator logs in directly by name
+    performLogin(matchedUser);
+  }
 });
 
 // Logout Helper
@@ -182,7 +209,13 @@ function handleLogout() {
   state.currentUser = null;
   appContainer.style.display = 'none';
   loginScreen.style.display = 'flex';
-  renderLoginUsers();
+  
+  // Reset login inputs
+  loginForm.reset();
+  loginPasswordContainer.style.display = 'none';
+  loginPwdInput.removeAttribute('required');
+  loginErrorMsg.style.display = 'none';
+  loginNameInput.focus();
 }
 
 logoutBtn.addEventListener('click', handleLogout);
@@ -414,7 +447,7 @@ function toggleChecklistItem(e, noteId, index) {
   }
 }
 
-// Render Users
+// Render Users Table
 function renderUsersTable() {
   usersTableBody.innerHTML = '';
   state.users.forEach(u => {
@@ -422,7 +455,7 @@ function renderUsersTable() {
     tr.innerHTML = `
       <td><strong>${u.name}</strong></td>
       <td>${u.role === 'boss' ? 'Jefe / Notario' : 'Colaborador'}</td>
-      <td><code>${u.password}</code></td>
+      <td><code>${u.password || 'Sin Clave'}</code></td>
       <td>
         <button class="btn btn-text" onclick="openUserModal('${u.id}')" style="padding: 6px 12px; font-size: 13px;">Editar</button>
       </td>
@@ -494,7 +527,7 @@ function openUserModal(userId = null) {
     document.getElementById('user-modal-title').textContent = 'Editar Colaborador';
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-name-input').value = user.name;
-    document.getElementById('user-password-input').value = user.password;
+    document.getElementById('user-password-input').value = user.password || '';
   } else {
     document.getElementById('user-modal-title').textContent = 'Agregar Colaborador';
     document.getElementById('user-id').value = '';
