@@ -160,26 +160,28 @@ function loadData() {
 
     // 1. Listen to Users in real-time
     db.collection('users').onSnapshot(snapshot => {
-      const usersList = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.role && !data.roles) {
-          data.roles = [data.role]; // Backward compatibility
-        }
-        usersList.push(data);
-      });
-      
-      const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
-      if (usersList.length === 0 || !bossInList) {
-        // Si no hay datos (o falta el jefe) en Firebase, subimos los datos locales
-        state.users.forEach(u => {
-          db.collection('users').doc(u.id).set(u).catch(e => console.warn("Error saving user to DB:", e));
-        });
+      if (snapshot.empty) {
+        const seedUsers = state.users.length > 0 ? state.users : DEFAULT_USERS;
+        seedUsers.forEach(u => db.collection('users').doc(u.id).set(u).catch(() => {}));
+        state.users = seedUsers;
       } else {
+        const usersList = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.role && !data.roles) data.roles = [data.role];
+          usersList.push(data);
+        });
+        
+        const bossInList = usersList.some(u => u.roles && u.roles.includes('boss'));
+        if (!bossInList) {
+          const bossUser = DEFAULT_USERS.find(u => u.roles.includes('boss'));
+          usersList.push(bossUser);
+          db.collection('users').doc(bossUser.id).set(bossUser).catch(() => {});
+        }
         state.users = usersList;
-        localStorage.setItem('scriptura_users', JSON.stringify(state.users));
       }
       
+      localStorage.setItem('scriptura_users', JSON.stringify(state.users));
       renderUsersTable();
       populateDropdowns();
       renderLoginUsers();
@@ -190,7 +192,6 @@ function loadData() {
       }
     }, error => {
       console.error("Firebase error en users:", error);
-      alert("Error conectando a la Base de Datos Firebase. Revisar consola o permisos.");
       if (!isResolved) {
         isResolved = true;
         if (overlay) overlay.style.display = 'none';
@@ -199,49 +200,55 @@ function loadData() {
 
     // 2. Listen to Deeds
     db.collection('deeds').onSnapshot(snapshot => {
-      const deedsList = [];
-      snapshot.forEach(doc => deedsList.push(doc.data()));
-      if (deedsList.length === 0) {
-        state.deeds.forEach(d => db.collection('deeds').doc(d.id).set(d).catch(e => {}));
+      if (snapshot.empty) {
+        const seedDeeds = state.deeds.length > 0 ? state.deeds : DEFAULT_DEEDS;
+        seedDeeds.forEach(d => db.collection('deeds').doc(d.id).set(d).catch(() => {}));
+        state.deeds = seedDeeds;
       } else {
+        const deedsList = [];
+        snapshot.forEach(doc => deedsList.push(doc.data()));
         state.deeds = deedsList;
-        localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
-        renderDeeds();
-        populateDropdowns();
-        updateMetrics();
       }
+      localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
+      renderDeeds();
+      populateDropdowns();
+      updateMetrics();
     }, error => {
       console.error("Firebase error en deeds:", error.message);
     });
 
     // 3. Listen to Notes
     db.collection('notes').onSnapshot(snapshot => {
-      const notesList = [];
-      snapshot.forEach(doc => notesList.push(doc.data()));
-      if (notesList.length === 0) {
-        state.notes.forEach(n => db.collection('notes').doc(n.id).set(n).catch(e => {}));
+      if (snapshot.empty) {
+        const seedNotes = state.notes.length > 0 ? state.notes : DEFAULT_NOTES;
+        seedNotes.forEach(n => db.collection('notes').doc(n.id).set(n).catch(() => {}));
+        state.notes = seedNotes;
       } else {
+        const notesList = [];
+        snapshot.forEach(doc => notesList.push(doc.data()));
         state.notes = notesList;
-        localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
-        renderNotes();
-        updateMetrics();
       }
+      localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
+      renderNotes();
+      updateMetrics();
     }, error => {
       console.error("Firebase error en notes:", error.message);
     });
 
     // 4. Listen to Calendar Events
     db.collection('events').onSnapshot(snapshot => {
-      const eventsList = [];
-      snapshot.forEach(doc => eventsList.push(doc.data()));
-      if (eventsList.length === 0) {
-        state.events.forEach(e => db.collection('events').doc(e.id).set(e).catch(e => {}));
+      if (snapshot.empty) {
+        const seedEvents = state.events.length > 0 ? state.events : DEFAULT_EVENTS;
+        seedEvents.forEach(e => db.collection('events').doc(e.id).set(e).catch(() => {}));
+        state.events = seedEvents;
       } else {
+        const eventsList = [];
+        snapshot.forEach(doc => eventsList.push(doc.data()));
         state.events = eventsList;
-        localStorage.setItem('scriptura_events', JSON.stringify(state.events));
-        renderCalendar();
-        renderEventsForSelectedDay();
       }
+      localStorage.setItem('scriptura_events', JSON.stringify(state.events));
+      renderCalendar();
+      renderEventsForSelectedDay();
     }, error => {
       console.error("Firebase error en events:", error.message);
     });
@@ -254,7 +261,7 @@ function loadData() {
         renderOfficeTags();
         populateDropdowns();
       } else {
-        db.collection('config').doc('offices').set({ list: state.offices }).catch(e => {});
+        db.collection('config').doc('offices').set({ list: state.offices }).catch(() => {});
       }
     }, error => {
       console.error("Firebase error en config:", error.message);
@@ -679,7 +686,8 @@ function setActiveFilter(element, filterType) {
   document.querySelectorAll('.filter-bar .pill-btn').forEach(btn => btn.classList.remove('active'));
   element.classList.add('active');
   state.currentFilter = filterType;
-  renderNotes(searchInput.value);
+  const query = searchInput ? searchInput.value : '';
+  renderNotes(query);
 }
 
 // Render Deeds
@@ -717,8 +725,7 @@ function renderDeeds(filterText = '') {
 // Render Notes/Tasks Grid
 function renderNotes(filterText = '') {
   notesContainer.innerHTML = '';
-  const isBoss = state.currentUser && state.currentUser.role === 'boss';
-  
+  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
   const filtered = state.notes.filter(note => {
     const matchesQuery = 
       note.title.toLowerCase().includes(filterText.toLowerCase()) ||
@@ -1365,11 +1372,13 @@ document.querySelectorAll('.modal-close-btn').forEach(btn => {
   });
 });
 
-searchInput.addEventListener('input', (e) => {
-  const query = e.target.value;
-  renderDeeds(query);
-  renderNotes(query);
-});
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value;
+    renderDeeds(query);
+    renderNotes(query);
+  });
+}
 
 // --- Swipe Gestures for Mobile ---
 let touchStartX = 0;
@@ -1398,7 +1407,8 @@ function handleSwipeGesture() {
     if (touchEndX < touchStartX) {
       // Swipe left -> Next screen
       if (currentIndex < screenOrder.length - 1) {
-        if (screenOrder[currentIndex + 1] === 'admin-screen' && state.currentUser?.role !== 'boss') return;
+        const isBossSwipe = state.currentUser?.roles && state.currentUser.roles.includes('boss');
+        if (screenOrder[currentIndex + 1] === 'admin-screen' && !isBossSwipe) return;
         switchScreen(screenOrder[currentIndex + 1]);
       }
     } else if (touchEndX > touchStartX) {
