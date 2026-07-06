@@ -1,42 +1,84 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
 
 :root {
-  /* Premium Salesforce/Dashboard Inspired Color Palette (Warm Cream & Pastel Accents) */
-  --md-sys-color-primary: #121212;
+  /* Google Material Design 3 (M3) Blue Theme Tokens - Dark Mode Default */
+  --md-sys-color-primary: #9ecbff;
+  --md-sys-color-on-primary: #003258;
+  --md-sys-color-primary-container: #00497d;
+  --md-sys-color-on-primary-container: #d1e4ff;
+  --md-sys-color-secondary: #bac7db;
+  --md-sys-color-on-secondary: #253140;
+  --md-sys-color-secondary-container: #3c4758;
+  --md-sys-color-on-secondary-container: #d7e3f7;
+  --md-sys-color-background: #111318;
+  --md-sys-color-on-background: #e2e2e9;
+  --md-sys-color-surface: #111318;
+  --md-sys-color-on-surface: #e2e2e9;
+  --md-sys-color-surface-variant: #43474e;
+  --md-sys-color-on-surface-variant: #c3c6cf;
+  --md-sys-color-outline: #8d9199;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-success: #8be19a;
+  --md-sys-color-on-success: #003912;
+  
+  /* Fonts */
+  --font-family: 'Outfit', 'Roboto', sans-serif;
+  
+  /* Tonal Elevation (Google M3 standard) */
+  --elevation-1: 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 1px 2px 0px rgba(0, 0, 0, 0.15);
+  --elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --elevation-3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.3);
+  
+  /* Corner Radii (Google M3 standard) */
+  --shape-small: 8px;
+  --shape-medium: 12px;
+  --shape-large: 16px;
+  --shape-extra-large: 28px;
+  --shape-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 0.1s cubic-bezier(0, 0, 0.2, 1);
+  --transition-standard: 0.2s cubic-bezier(0, 0, 0.2, 1);
+
+  /* Google Keep Card Colors - Dark Mode */
+  --keep-color-1: #202124; /* Default/Transparent */
+  --keep-color-2: #5c2b29; /* Red */
+  --keep-color-3: #345920; /* Green */
+  --keep-color-4: #614a19; /* Yellow */
+  --keep-color-5: #2d555e; /* Teal */
+  --keep-color-6: #42275e; /* Purple */
+}
+
+/* Light Theme overrides matching Google M3 Light Theme */
+body.light-theme {
+  --md-sys-color-primary: #0061a4;
   --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #eae8e1;
-  --md-sys-color-on-primary-container: #121212;
-  --md-sys-color-secondary: #605e56;
-  --md-sys-color-background: #f5f4ef;
-  --md-sys-color-on-background: #121212;
+  --md-sys-color-primary-container: #d1e4ff;
+  --md-sys-color-on-primary-container: #001d36;
+  --md-sys-color-secondary: #535f70;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #d7e3f7;
+  --md-sys-color-on-secondary-container: #101c2b;
+  --md-sys-color-background: #f8f9ff;
+  --md-sys-color-on-background: #191c20;
   --md-sys-color-surface: #ffffff;
-  --md-sys-color-on-surface: #121212;
-  --md-sys-color-surface-variant: #eae8e1;
-  --md-sys-color-on-surface-variant: #5c5a54;
-  --md-sys-color-outline: #d3d1cb;
+  --md-sys-color-on-surface: #191c20;
+  --md-sys-color-surface-variant: #dfe2eb;
+  --md-sys-color-on-surface-variant: #43474e;
+  --md-sys-color-outline: #73777f;
   --md-sys-color-error: #ba1a1a;
   --md-sys-color-on-error: #ffffff;
   --md-sys-color-success: #008732;
   --md-sys-color-on-success: #ffffff;
-  
-  /* Fonts */
-  --font-family: 'Outfit', sans-serif;
-  
-  /* Elevation & Shadows (Subtle, clean shadows) */
-  --elevation-1: 0px 1px 2px rgba(0, 0, 0, 0.05);
-  --elevation-2: 0px 4px 10px rgba(0, 0, 0, 0.04);
-  --elevation-3: 0px 12px 30px rgba(0, 0, 0, 0.08);
-  
-  /* Shape */
-  --shape-small: 10px;
-  --shape-medium: 16px;
-  --shape-large: 24px;
-  --shape-extra-large: 32px;
-  --shape-full: 9999px;
-  
-  /* Transitions */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-standard: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Google Keep Card Colors - Light Mode */
+  --keep-color-1: #ffffff; /* Default */
+  --keep-color-2: #f28b82; /* Red */
+  --keep-color-3: #ccff90; /* Green */
+  --keep-color-4: #fff475; /* Yellow */
+  --keep-color-5: #a7ffeb; /* Teal */
+  --keep-color-6: #d7aef8; /* Purple */
 }
 
 /* Base Styles */
@@ -66,11 +108,11 @@ body {
   background-color: var(--md-sys-color-background);
 }
 
-/* Left Icon Navigation Rail (Extremely Clean) */
+/* Navigation Drawer (Google M3 style Sidebar) */
 .nav-drawer {
   width: 80px;
   background-color: var(--md-sys-color-surface);
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid var(--md-sys-color-surface-variant);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -88,12 +130,12 @@ body {
 .nav-logo {
   width: 48px;
   height: 48px;
-  border-radius: var(--shape-full);
+  border-radius: var(--shape-large);
   background-color: var(--md-sys-color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--md-sys-color-on-primary);
 }
 
 .nav-logo svg {
@@ -102,7 +144,7 @@ body {
 }
 
 .nav-title {
-  display: none; /* Icon-only sidebar as in mockup */
+  display: none;
 }
 
 .nav-list {
@@ -114,30 +156,30 @@ body {
 }
 
 .nav-item {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--shape-full);
+  border-radius: var(--shape-large);
   cursor: pointer;
-  color: #8c8a82;
+  color: var(--md-sys-color-on-surface-variant);
   transition: all var(--transition-fast);
 }
 
 .nav-item:hover {
-  background-color: #f5f4ef;
-  color: var(--md-sys-color-on-background);
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface);
 }
 
 .nav-item.active {
   background-color: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .nav-item svg {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   fill: currentColor;
 }
 
@@ -161,18 +203,18 @@ body {
   width: 40px;
   height: 40px;
   border-radius: var(--shape-full);
-  background-color: #ecebea;
-  color: #121212;
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--md-sys-color-outline);
 }
 
 .user-info {
-  display: none; /* Hidden on mini sidebar */
+  display: none;
 }
 
 /* Main Dashboard Panel */
@@ -200,9 +242,9 @@ body {
 }
 
 .sub-title {
-  font-size: 13px;
-  color: #8c8a82;
-  font-weight: 500;
+  font-size: 12px;
+  color: var(--md-sys-color-primary);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -225,16 +267,17 @@ body {
 
 .stat-label {
   font-size: 12px;
-  color: #8c8a82;
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: 4px;
 }
 
 .stat-value {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
 }
 
-/* Filter Bar Actions (Mockup Top Pills) */
+/* Filter Bar Actions */
 .filter-bar {
   display: flex;
   align-items: center;
@@ -247,8 +290,9 @@ body {
   border-radius: var(--shape-full);
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--md-sys-color-outline);
   background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
@@ -257,14 +301,14 @@ body {
 }
 
 .pill-btn.active {
-  background-color: #121212;
-  color: #fff;
-  border-color: #121212;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
 }
 
 .pill-badge {
-  background-color: #ffd24d;
-  color: #121212;
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   padding: 2px 8px;
   border-radius: var(--shape-full);
   font-size: 11px;
@@ -274,7 +318,7 @@ body {
 /* Horizontal line / divider */
 .header-divider {
   height: 1px;
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--md-sys-color-surface-variant);
   margin-bottom: 24px;
 }
 
@@ -283,37 +327,36 @@ body {
   flex: 1;
   overflow-y: auto;
   display: none;
-  padding-bottom: 100px; /* Room for bottom floating controls */
+  padding-bottom: 100px;
 }
 
 .screen.active {
   display: block;
 }
 
-/* Keep Cards Layout (Paste board like mockup) */
+/* Keep Cards Layout */
 .keep-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
-/* Keep Cards (Pastel Colors, Large Round Corners) */
+/* Keep Cards (Google Keep Style) */
 .keep-card {
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: var(--shape-large);
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   position: relative;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   cursor: pointer;
-  border: none;
-  min-height: 180px;
+  border: 1px solid var(--md-sys-color-outline);
+  min-height: 160px;
 }
 
 .keep-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--elevation-2);
+  box-shadow: var(--elevation-1);
 }
 
 .keep-card-header {
@@ -323,29 +366,30 @@ body {
 }
 
 .keep-card-category {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  opacity: 0.6;
+  color: var(--md-sys-color-on-surface-variant);
   font-weight: bold;
 }
 
 .card-action-dot {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--shape-full);
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .keep-card-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.3;
-  margin-top: -4px;
+  color: var(--md-sys-color-on-surface);
 }
 
 /* Checklist items list */
@@ -362,12 +406,13 @@ body {
   gap: 10px;
   font-size: 13px;
   font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
 .checklist-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #121212;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--md-sys-color-primary);
   cursor: pointer;
 }
 
@@ -392,35 +437,36 @@ body {
 
 .card-footer-name {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface);
 }
 
 .card-footer-date {
   font-size: 11px;
-  opacity: 0.6;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .assigned-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--shape-full);
-  overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  border: 1px solid var(--md-sys-color-outline);
 }
 
-/* Colorful Card Colors Inspired by mockup */
-.card-color-1 { background-color: #e3f2fd; } /* Soft Blue */
-.card-color-2 { background-color: #f3e5f5; } /* Pastel Purple */
-.card-color-3 { background-color: #e8f5e9; } /* Pastel Green */
-.card-color-4 { background-color: #fff9c4; } /* Pastel Yellow */
-.card-color-5 { background-color: #ffebee; } /* Pastel Red */
-.card-color-6 { background-color: #efebe9; } /* Pastel Grey */
+/* Card Pastel Colors Map */
+.card-color-1 { background-color: var(--keep-color-1); }
+.card-color-2 { background-color: var(--keep-color-2); }
+.card-color-3 { background-color: var(--keep-color-3); }
+.card-color-4 { background-color: var(--keep-color-4); }
+.card-color-5 { background-color: var(--keep-color-5); }
+.card-color-6 { background-color: var(--keep-color-6); }
 
 /* Dynamic Floating Actions at Bottom Center */
 .floating-action-bar {
@@ -435,7 +481,7 @@ body {
   align-items: center;
   gap: 12px;
   box-shadow: var(--elevation-3);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--md-sys-color-surface-variant);
   z-index: 200;
 }
 
@@ -449,26 +495,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #5c5a54;
+  color: var(--md-sys-color-on-surface-variant);
   transition: all var(--transition-fast);
 }
 
 .floating-btn:hover {
-  background-color: #f5f4ef;
-  color: #121212;
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface);
 }
 
 .floating-btn-center {
-  background-color: #121212;
-  color: #fff;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   width: 44px;
   height: 44px;
   border-radius: var(--shape-full);
 }
 
 .floating-btn-center:hover {
-  background-color: #2b2b2b;
-  color: #fff;
+  opacity: 0.9;
 }
 
 /* Escrituras List design */
@@ -485,7 +530,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--md-sys-color-outline);
   box-shadow: var(--elevation-1);
   transition: transform var(--transition-fast);
   cursor: pointer;
@@ -502,19 +547,21 @@ body {
 }
 
 .deed-number {
-  font-size: 12px;
-  color: #8c8a82;
-  font-weight: bold;
+  font-size: 11px;
+  color: var(--md-sys-color-primary);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .deed-title {
   font-size: 16px;
   font-weight: 600;
+  color: var(--md-sys-color-on-surface);
 }
 
 .deed-client {
   font-size: 13px;
-  color: #5c5a54;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .deed-meta {
@@ -532,18 +579,18 @@ body {
 }
 
 .status-firmado {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: var(--md-sys-color-success);
+  color: var(--md-sys-color-on-success);
 }
 
 .status-pendiente {
-  background-color: #fff9c4;
-  color: #f57f17;
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .status-revision {
-  background-color: #ffebee;
-  color: #c62828;
+  background-color: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
 }
 
 /* Login/Portal Screen */
@@ -572,13 +619,13 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--md-sys-color-surface-variant);
 }
 
 .login-title {
   font-size: 28px;
   font-weight: 700;
-  color: #121212;
+  color: var(--md-sys-color-on-surface);
 }
 
 .login-select-list {
@@ -592,9 +639,9 @@ body {
   width: 100%;
   padding: 16px;
   border-radius: var(--shape-medium);
-  background-color: #f5f4ef;
+  background-color: var(--md-sys-color-surface-variant);
   border: 1px solid transparent;
-  color: #121212;
+  color: var(--md-sys-color-on-surface);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -604,8 +651,8 @@ body {
 }
 
 .login-option:hover {
-  border-color: #121212;
-  background-color: #eae8e1;
+  border-color: var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-primary-container);
 }
 
 /* Modal overlays and content */
@@ -615,7 +662,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.4);
   display: none;
   align-items: center;
   justify-content: center;
@@ -637,11 +684,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  border: 1px solid var(--md-sys-color-surface-variant);
 }
 
 .modal-header {
   font-size: 22px;
   font-weight: 700;
+  color: var(--md-sys-color-on-surface);
 }
 
 .input-field {
@@ -653,13 +702,13 @@ body {
 .input-field label {
   font-size: 13px;
   font-weight: 600;
-  color: #8c8a82;
+  color: var(--md-sys-color-primary);
 }
 
 .input-field input, .input-field select, .input-field textarea {
-  background-color: #f5f4ef;
+  background-color: var(--md-sys-color-surface-variant);
   border: 1px solid transparent;
-  color: #121212;
+  color: var(--md-sys-color-on-surface);
   padding: 14px;
   border-radius: var(--shape-medium);
   font-size: 15px;
@@ -667,7 +716,7 @@ body {
 }
 
 .input-field input:focus, .input-field select:focus, .input-field textarea:focus {
-  border-color: #121212;
+  border-color: var(--md-sys-color-primary);
 }
 
 .modal-actions {
@@ -687,21 +736,21 @@ body {
 }
 
 .btn-primary {
-  background-color: #121212;
-  color: #fff;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 .btn-primary:hover {
-  background-color: #2b2b2b;
+  opacity: 0.9;
 }
 
 .btn-text {
   background: none;
-  color: #5c5a54;
+  color: var(--md-sys-color-primary);
 }
 
 .btn-text:hover {
-  background-color: #f5f4ef;
+  background-color: var(--md-sys-color-surface-variant);
 }
 
 /* User table styles */
@@ -710,6 +759,7 @@ body {
   border-radius: var(--shape-large);
   padding: 24px;
   box-shadow: var(--elevation-1);
+  border: 1px solid var(--md-sys-color-surface-variant);
 }
 
 .user-table {
@@ -720,16 +770,16 @@ body {
 .user-table th, .user-table td {
   padding: 16px;
   text-align: left;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--md-sys-color-surface-variant);
 }
 
 .user-table th {
-  color: #8c8a82;
+  color: var(--md-sys-color-primary);
   font-weight: 600;
   font-size: 13px;
 }
 
-/* Bottom Nav (Mobile only) */
+/* Bottom Nav */
 .bottom-nav {
   display: none;
   position: fixed;
@@ -738,7 +788,7 @@ body {
   width: 100vw;
   height: 72px;
   background-color: var(--md-sys-color-surface);
-  border-top: 1px solid rgba(0,0,0,0.06);
+  border-top: 1px solid var(--md-sys-color-surface-variant);
   z-index: 90;
   justify-content: space-around;
   align-items: center;
@@ -749,14 +799,14 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  color: #8c8a82;
+  color: var(--md-sys-color-on-surface-variant);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .bottom-nav-item.active {
-  color: #121212;
+  color: var(--md-sys-color-primary);
 }
 
 .bottom-nav-item svg {
@@ -779,7 +829,7 @@ body {
 }
 
 .color-dot.selected {
-  border-color: #121212;
+  border-color: var(--md-sys-color-outline);
 }
 
 /* Builder Items */
@@ -819,4 +869,5 @@ body {
     gap: 20px;
   }
 }
+
 

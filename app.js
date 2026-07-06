@@ -125,12 +125,10 @@ let selectedUserForLogin = null;
 function handleLoginSelect(user) {
   selectedUserForLogin = user;
   if (user.role === 'boss') {
-    // Prompt password modal
     document.getElementById('boss-password-input').value = '';
     document.getElementById('password-error').style.display = 'none';
     passwordModal.classList.add('active');
   } else {
-    // Log in collaborator instantly (no credentials required per client spec)
     performLogin(user);
   }
 }
@@ -140,10 +138,8 @@ function performLogin(user) {
   loginScreen.style.display = 'none';
   appContainer.style.display = 'flex';
   
-  // Set profile info
   activeUserAvatar.textContent = user.name.charAt(0).toUpperCase();
   
-  // Admin screen visual buttons
   const navAdmin = document.getElementById('nav-admin-btn');
   const bottomAdmin = document.getElementById('bottom-admin-btn');
   const barAdmin = document.getElementById('bar-switch-admin');
@@ -199,7 +195,6 @@ function switchScreen(screenId) {
   const targetScreen = document.getElementById(screenId);
   if (targetScreen) targetScreen.classList.add('active');
   
-  // Update header text based on screen
   const headerTitle = document.getElementById('dashboard-title-text');
   if (screenId === 'deeds-screen') {
     headerTitle.textContent = 'Operación Diaria';
@@ -209,7 +204,6 @@ function switchScreen(screenId) {
     headerTitle.textContent = 'Gestión de Personal';
   }
 
-  // Sync active states on sidebar & bottombar
   navItems.forEach(item => {
     if (item.getAttribute('data-target') === screenId) {
       item.classList.add('active');
@@ -218,7 +212,6 @@ function switchScreen(screenId) {
     }
   });
 
-  // Sync active states on floating bar buttons
   document.querySelectorAll('.floating-btn').forEach(btn => {
     btn.classList.remove('active');
   });
@@ -241,7 +234,6 @@ navItems.forEach(item => {
   });
 });
 
-// Bind floating action bar items specifically
 document.getElementById('bar-switch-deeds').addEventListener('click', () => switchScreen('deeds-screen'));
 document.getElementById('bar-switch-tasks').addEventListener('click', () => switchScreen('keep-screen'));
 document.getElementById('bar-switch-admin').addEventListener('click', () => switchScreen('admin-screen'));
@@ -261,7 +253,7 @@ function applyTheme() {
   }
 }
 
-// Calculate and Update Dashboard Metrics in real-time
+// Metrics Update
 function updateMetrics() {
   document.getElementById('stat-deeds-count').textContent = state.deeds.length;
   
@@ -279,7 +271,7 @@ function updateMetrics() {
   document.getElementById('badge-completed').textContent = completedNotes;
 }
 
-// Filter button logic
+// Filters
 document.getElementById('filter-all').addEventListener('click', (e) => {
   setActiveFilter(e.target.closest('.pill-btn'), 'all');
 });
@@ -297,7 +289,7 @@ function setActiveFilter(element, filterType) {
   renderNotes(searchInput.value);
 }
 
-// Render Deeds Registry
+// Render Deeds
 function renderDeeds(filterText = '') {
   deedsContainer.innerHTML = '';
   const filtered = state.deeds.filter(d => 
@@ -329,24 +321,19 @@ function renderDeeds(filterText = '') {
   });
 }
 
-// Render Notes and Tasks Board (Google Keep Board / Kanban Grid Style)
+// Render Notes/Tasks Grid
 function renderNotes(filterText = '') {
   notesContainer.innerHTML = '';
-  
   const isBoss = state.currentUser && state.currentUser.role === 'boss';
   
   const filtered = state.notes.filter(note => {
-    // Search query filter
     const matchesQuery = 
       note.title.toLowerCase().includes(filterText.toLowerCase()) ||
       note.checklist.some(item => item.text.toLowerCase().includes(filterText.toLowerCase()));
       
     if (!matchesQuery) return false;
-
-    // Collaborator view filter
     if (!isBoss && note.assignedTo !== state.currentUser.id) return false;
 
-    // Sub-pill filter
     const isCompleted = note.checklist.length > 0 && note.checklist.every(item => item.done);
     if (state.currentFilter === 'pending' && isCompleted) return false;
     if (state.currentFilter === 'completed' && !isCompleted) return false;
@@ -366,7 +353,6 @@ function renderNotes(filterText = '') {
     const assignedUser = state.users.find(u => u.id === note.assignedTo);
     const linkedDeed = state.deeds.find(d => d.id === note.deedId);
     
-    // Checklist html
     let checklistHtml = '';
     let doneCount = 0;
     note.checklist.forEach((item, index) => {
@@ -389,7 +375,7 @@ function renderNotes(filterText = '') {
       <div class="keep-card-title">${note.title}</div>
       
       <div style="width:100%; height:4px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden; margin-top:-4px;">
-        <div style="width:${progressPercent}%; height:100%; background-color:#121212; transition: width 0.3s ease;"></div>
+        <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
       </div>
 
       <ul class="card-checklist">
@@ -428,7 +414,7 @@ function toggleChecklistItem(e, noteId, index) {
   }
 }
 
-// Render Users/Collaborators Table
+// Render Users
 function renderUsersTable() {
   usersTableBody.innerHTML = '';
   state.users.forEach(u => {
