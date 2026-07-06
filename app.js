@@ -356,6 +356,9 @@ function renderLoginUsers() {
 
 function performLogin(user) {
   state.currentUser = user;
+  if (state.users.length === 0) {
+    state.users = DEFAULT_USERS;
+  }
   loginScreen.style.display = 'none';
   appContainer.style.display = 'flex';
   
@@ -403,7 +406,12 @@ loginForm.addEventListener('submit', (e) => {
   const nameVal = loginNameInput.value.trim();
   const pwdVal = loginPwdInput.value.trim();
   
-  const matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+  let matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+  
+  // Fallback if Firestore has not loaded/synced yet
+  if (!matchedUser && state.users.length === 0) {
+    matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+  }
   
   if (!matchedUser) {
     loginErrorMsg.textContent = 'Usuario no registrado. Contacta al Administrador.';
