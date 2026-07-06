@@ -306,7 +306,7 @@ const speedDialMenu = document.getElementById('speed-dial-menu');
 function renderLoginUsers() {
   if (loginUsersListContainer) {
     loginUsersListContainer.innerHTML = '';
-    const usersToRender = state.users.length > 0 ? state.users : DEFAULT_USERS;
+    const usersToRender = state.users;
     usersToRender.forEach(user => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -414,14 +414,8 @@ if (loginForm) {
       matchedUser = state.users.find(u => u.roles && u.roles.includes('boss'));
     }
     
-    // Fallback if Firestore has not loaded/synced yet
-    if (!matchedUser && state.users.length === 0) {
-      if (hectorVariations.includes(cleanNameVal)) {
-        matchedUser = DEFAULT_USERS.find(u => u.roles && u.roles.includes('boss'));
-      } else {
-        matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
-      }
-    }
+    // Eliminado el fallback local de DEFAULT_USERS.
+    // Firebase ya maneja la carga y creación del jefe.
     
     if (!matchedUser) {
       loginErrorMsg.textContent = 'Usuario no registrado. Contacta al Administrador.';
