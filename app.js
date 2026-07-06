@@ -45,7 +45,7 @@ const DEFAULT_USERS = [
   { id: '1', name: 'Mariano Sanchez', role: 'colaborador', password: '' },
   { id: '2', name: 'Paola Madrigal', role: 'colaborador', password: '' },
   { id: '3', name: 'Daniel Villagran', role: 'colaborador', password: '' },
-  { id: 'boss', name: 'Hector Omar', role: 'boss', password: '1234' }
+  { id: 'boss', name: 'Hector Omar Lopez Mora', role: 'boss', password: '1234' }
 ];
 
 const DEFAULT_DEEDS = [
@@ -321,7 +321,7 @@ function performLogin(user) {
 loginNameInput.addEventListener('input', (e) => {
   const val = e.target.value.trim().toLowerCase();
   loginErrorMsg.style.display = 'none';
-  if (val === 'hector omar') {
+  if (val === 'hector omar' || val === 'hector omar lopez mora') {
     loginPasswordContainer.style.display = 'block';
     loginPwdInput.setAttribute('required', 'true');
   } else {
