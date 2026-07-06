@@ -358,14 +358,12 @@ const globalFab = document.getElementById('global-fab');
 const activeUserAvatar = document.getElementById('active-user-avatar');
 
 // Login Form Elements
+const loginForm = document.getElementById('login-form');
+const loginNameInput = document.getElementById('login-name-input');
+const loginPasswordContainer = document.getElementById('login-password-container');
 const loginUsersListContainer = document.getElementById('login-users-list-container');
-const loginPasswordForm = document.getElementById('login-password-form');
-const loginSelectedName = document.getElementById('login-selected-name');
 const loginPwdInput = document.getElementById('login-pwd-input');
 const loginErrorMsg = document.getElementById('login-error-msg');
-const loginBackBtn = document.getElementById('login-back-btn');
-
-let selectedLoginUser = null;
 
 // Modals
 const deedModal = document.getElementById('deed-modal');
@@ -385,6 +383,7 @@ function renderLoginUsers() {
     const usersToRender = state.users.length > 0 ? state.users : DEFAULT_USERS;
     usersToRender.forEach(user => {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'login-option';
       
       const isBoss = user.roles && user.roles.includes('boss');
@@ -398,18 +397,10 @@ function renderLoginUsers() {
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
       `;
       
-      btn.addEventListener('click', () => {
-        selectedLoginUser = user;
-        if (isBoss) {
-          loginUsersListContainer.style.display = 'none';
-          loginPasswordForm.style.display = 'flex';
-          loginSelectedName.textContent = user.name;
-          loginErrorMsg.style.display = 'none';
-          loginPwdInput.value = '';
-          loginPwdInput.focus();
-        } else {
-          performLogin(user);
-        }
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        loginNameInput.value = user.name;
+        loginNameInput.dispatchEvent(new Event('input'));
       });
       loginUsersListContainer.appendChild(btn);
     });
@@ -450,29 +441,80 @@ function performLogin(user) {
   renderOfficeTags();
 }
 
-// Login Form Submit (Password Only)
-if(loginPasswordForm) {
-  loginPasswordForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!selectedLoginUser) return;
-    
-    const pwdVal = loginPwdInput.value.trim();
-    if (pwdVal === selectedLoginUser.password) {
-      performLogin(selectedLoginUser);
+// Handle login typing behavior
+if (loginNameInput) {
+  loginNameInput.addEventListener('input', (e) => {
+    const val = e.target.value.trim().toLowerCase();
+    loginErrorMsg.style.display = 'none';
+    if (val === 'hector' || val === 'hector omar' || val === 'hector omar lopez mora') {
+      loginPasswordContainer.style.display = 'block';
+      loginPwdInput.setAttribute('required', 'true');
     } else {
-      loginErrorMsg.textContent = 'Contraseña incorrecta.';
-      loginErrorMsg.style.display = 'block';
-      loginPwdInput.focus();
+      loginPasswordContainer.style.display = 'none';
+      loginPwdInput.removeAttribute('required');
+      loginPwdInput.value = '';
     }
+    
+    // Filter visually the buttons if typing
+    const buttons = loginUsersListContainer.querySelectorAll('.login-option');
+    buttons.forEach(btn => {
+      if (btn.textContent.toLowerCase().includes(val)) {
+        btn.style.display = 'flex';
+      } else {
+        btn.style.display = 'none';
+      }
+    });
   });
 }
 
-if(loginBackBtn) {
-  loginBackBtn.addEventListener('click', () => {
-    selectedLoginUser = null;
-    loginPasswordForm.style.display = 'none';
-    loginUsersListContainer.style.display = 'flex';
-    loginErrorMsg.style.display = 'none';
+// Login Form Submit
+if (loginForm) {
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nameVal = loginNameInput.value.trim();
+    const pwdVal = loginPwdInput.value.trim();
+    
+    let matchedUser = state.users.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+    
+    // Variaciones para el jefe
+    const hectorVariations = ['hector', 'hector omar', 'hector omar lopez mora'];
+    if (hectorVariations.includes(nameVal.toLowerCase())) {
+      matchedUser = state.users.find(u => u.roles && u.roles.includes('boss'));
+    }
+    
+    // Fallback if Firestore has not loaded/synced yet
+    if (!matchedUser && state.users.length === 0) {
+      if (hectorVariations.includes(nameVal.toLowerCase())) {
+        matchedUser = DEFAULT_USERS.find(u => u.roles && u.roles.includes('boss'));
+      } else {
+        matchedUser = DEFAULT_USERS.find(u => u.name.toLowerCase() === nameVal.toLowerCase());
+      }
+    }
+    
+    if (!matchedUser) {
+      loginErrorMsg.textContent = 'Usuario no registrado. Contacta al Administrador.';
+      loginErrorMsg.style.display = 'block';
+      return;
+    }
+    
+    if (matchedUser.roles && matchedUser.roles.includes('boss')) {
+      if (loginPasswordContainer.style.display === 'none') {
+        loginPasswordContainer.style.display = 'block';
+        loginPwdInput.setAttribute('required', 'true');
+        loginPwdInput.focus();
+        return;
+      }
+      
+      if (pwdVal === matchedUser.password) {
+        performLogin(matchedUser);
+      } else {
+        loginErrorMsg.textContent = 'Contraseña incorrecta.';
+        loginErrorMsg.style.display = 'block';
+        loginPwdInput.focus();
+      }
+    } else {
+      performLogin(matchedUser);
+    }
   });
 }
 

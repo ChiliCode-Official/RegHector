@@ -25,21 +25,22 @@
         <p style="font-size: 13px; opacity: 0.7; text-align: center; color: #8c8a82;">Notaría Pública - Registro y Asignación de Tareas</p>
       </div>
 
-      <div id="login-users-list-container" class="login-select-list" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
-        <!-- Dynamically populated -->
-      </div>
-
-      <form id="login-password-form" style="width: 100%; display: none; flex-direction: column; gap: 16px;">
-        <h3 id="login-selected-name" style="text-align: center; font-weight: 600; color: var(--md-sys-color-primary); font-size: 18px;"></h3>
+      <form id="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
         <div class="input-field">
+          <label for="login-name-input">Nombre Completo</label>
+          <input type="text" id="login-name-input" placeholder="Escribe tu nombre o elige abajo..." required autocomplete="off">
+        </div>
+        
+        <div id="login-users-list-container" class="login-select-list" style="max-height: 180px; overflow-y: auto; padding-right: 4px; border: 1px solid var(--md-sys-color-surface-variant); border-radius: var(--shape-medium); padding: 4px;">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div class="input-field" id="login-password-container" style="display: none;">
           <label for="login-pwd-input">Contraseña de Acceso</label>
-          <input type="password" id="login-pwd-input" placeholder="Ingresa tu contraseña..." required>
+          <input type="password" id="login-pwd-input" placeholder="Contraseña...">
         </div>
         <div id="login-error-msg" style="color: var(--md-sys-color-error); font-size: 13px; font-weight: 500; display: none;"></div>
-        <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn" id="login-back-btn" style="flex: 1; background-color: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface);">Cancelar</button>
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Ingresar</button>
-        </div>
+        <button type="submit" class="btn btn-primary" id="login-submit-btn" style="width: 100%;">Ingresar</button>
       </form>
     </div>
   </div>
