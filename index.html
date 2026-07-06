@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Scriptura - Registro & Tareas Notariales</title>
+  <meta name="theme-color" content="#1f1b16">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="index.css">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+  <!-- Screen 0: Login Portal -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div class="nav-logo" style="width: 56px; height: 56px; background-color: #121212;">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="#fff">
+            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+          </svg>
+        </div>
+        <span class="login-title">Scriptura</span>
+        <p style="font-size: 13px; opacity: 0.7; text-align: center; color: #8c8a82;">Notaría Pública - Registro y Asignación de Tareas</p>
+      </div>
+
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
+        <p style="font-weight: 600; font-size: 15px; margin-bottom: -4px;">Ingresar como:</p>
+        <div id="login-users-list" class="login-select-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main PWA App Container -->
+  <div id="app-container" style="display: none;">
+    <!-- Left Navigation Rail (As seen in the mockup) -->
+    <aside class="nav-drawer">
+      <div class="nav-header">
+        <div class="nav-logo">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/>
+          </svg>
+        </div>
+      </div>
+
+      <ul class="nav-list">
+        <li class="nav-item active" data-target="deeds-screen" title="Escrituras">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </li>
+        <li class="nav-item" data-target="keep-screen" title="Notas y Tareas">
+          <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg>
+        </li>
+        <li class="nav-item" data-target="admin-screen" id="nav-admin-btn" style="display: none;" title="Colaboradores">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </li>
+      </ul>
+
+      <div class="nav-footer">
+        <button class="nav-item" id="theme-toggle" title="Cambiar Tema" style="width:40px; height:40px;">
+          <svg viewBox="0 0 24 24"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
+        </button>
+        <div class="user-profile">
+          <div class="user-avatar" id="active-user-avatar" title="Mi Perfil">U</div>
+          <button class="btn-icon" id="logout-btn" title="Cerrar Sesión" style="width:32px; height:32px; color: #8c8a82;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M13 3h-2v10h2V3zm4.78 2.22l-1.4 1.4A7.93 7.93 0 0 1 20 12c0 4.42-3.58 8-8 8s-8-3.58-8-8c0-2.82 1.46-5.3 3.62-6.78l-1.4-1.4A9.93 9.93 0 0 0 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10c0-3.12-1.43-5.91-3.69-7.78z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="main-content">
+      <!-- Top Title and Metrics Bar -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <span class="sub-title">Notaría Pública</span>
+          <h1 class="main-title" id="dashboard-title-text">Operación Diaria</h1>
+        </div>
+        
+        <!-- Metrics Counters (mockup "Week's Tasks 132", etc) -->
+        <div class="dashboard-stats">
+          <div class="stat-item">
+            <span class="stat-label">Escrituras Activas</span>
+            <span class="stat-value" id="stat-deeds-count">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Tareas Pendientes</span>
+            <span class="stat-value" id="stat-tasks-count">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Colaboradores</span>
+            <span class="stat-value" id="stat-colabs-count">0</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Sub-filter Pills bar -->
+      <div class="filter-bar">
+        <button class="pill-btn active" id="filter-all">
+          Todos <span class="pill-badge" id="badge-all">0</span>
+        </button>
+        <button class="pill-btn" id="filter-pending">
+          Pendientes <span class="pill-badge" id="badge-pending" style="background-color: #ffd24d;">0</span>
+        </button>
+        <button class="pill-btn" id="filter-completed">
+          Completados <span class="pill-badge" id="badge-completed" style="background-color: #a5d6a7;">0</span>
+        </button>
+        
+        <div style="flex:1;"></div>
+        
+        <!-- Search bar inside the workspace -->
+        <div class="search-box" style="background-color: #fff; border: 1px solid rgba(0,0,0,0.06); width:280px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="#8c8a82">
+            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          <input type="text" id="search-input" placeholder="Buscar registros...">
+        </div>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <!-- Screen 1: Escrituras (Registry) -->
+      <section id="deeds-screen" class="screen active">
+        <div class="deeds-list" id="deeds-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Screen 2: Tareas / Notas (Google Keep Board / Kanban Style) -->
+      <section id="keep-screen" class="screen">
+        <div class="keep-grid" id="notes-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Screen 3: Colaboradores (Admin Screen) -->
+      <section id="admin-screen" class="screen">
+        <div class="screen-header" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
+          <h2 style="font-weight:700;">Lista de Colaboradores</h2>
+          <button class="btn btn-primary" id="add-user-btn">+ Agregar Colaborador</button>
+        </div>
+
+        <div class="admin-card">
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Rol</th>
+                <th>Contraseña</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Floating Action Bar Bottom Center (as seen in the mockup) -->
+    <div class="floating-action-bar">
+      <button class="floating-btn" id="bar-switch-deeds" title="Ver Escrituras">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      </button>
+      <button class="floating-btn" id="bar-switch-tasks" title="Ver Tareas / Notas">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg>
+      </button>
+      <button class="floating-btn floating-btn-center" id="global-fab" title="Crear Nuevo Registro">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      </button>
+      <button class="floating-btn" id="bar-switch-admin" title="Colaboradores">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      </button>
+      <button class="floating-btn" id="bar-logout" title="Cerrar Sesión">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+      </button>
+    </div>
+
+    <!-- Bottom Navigation Bar (Mobile Nav Backwards compatibility) -->
+    <nav class="bottom-nav">
+      <div class="bottom-nav-item active" data-target="deeds-screen">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        <span>Escrituras</span>
+      </div>
+      <div class="bottom-nav-item" data-target="keep-screen">
+        <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg>
+        <span>Tareas</span>
+      </div>
+      <div class="bottom-nav-item" data-target="admin-screen" id="bottom-admin-btn" style="display: none;">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        <span>Colab</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Modal 1: Agregar/Editar Escritura -->
+  <div class="modal-overlay" id="deed-modal">
+    <div class="modal-content">
+      <div class="modal-header" id="deed-modal-title">Nueva Escritura</div>
+      <form id="deed-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <input type="hidden" id="deed-id">
+        <div class="input-field">
+          <label for="deed-number-input">Número de Escritura</label>
+          <input type="text" id="deed-number-input" placeholder="Ej. 45,281" required>
+        </div>
+        <div class="input-field">
+          <label for="deed-title-input">Acto Jurídico</label>
+          <input type="text" id="deed-title-input" placeholder="Ej. Compraventa de Inmueble" required>
+        </div>
+        <div class="input-field">
+          <label for="deed-client-input">Cliente / Otorgante</label>
+          <input type="text" id="deed-client-input" placeholder="Ej. Sofía Rodríguez" required>
+        </div>
+        <div class="input-field">
+          <label for="deed-status-input">Estado de Trámite</label>
+          <select id="deed-status-input">
+            <option value="pendiente">Pendiente de firma</option>
+            <option value="revision">En revisión legal</option>
+            <option value="firmado">Firmado / Completado</option>
+          </select>
+        </div>
+        <div class="input-field">
+          <label for="deed-desc-input">Anotaciones Generales</label>
+          <textarea id="deed-desc-input" rows="3" placeholder="Añade notas del caso..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Agregar/Editar Nota o Tarea (Keep Style) -->
+  <div class="modal-overlay" id="note-modal">
+    <div class="modal-content">
+      <div class="modal-header" id="note-modal-title">Crear Nota / Tarea</div>
+      <form id="note-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <input type="hidden" id="note-id">
+        <div class="input-field">
+          <label for="note-title-input">Título</label>
+          <input type="text" id="note-title-input" placeholder="Título del pendiente..." required>
+        </div>
+        
+        <div class="input-field">
+          <label for="note-assigned-input">Asignar a Colaborador</label>
+          <select id="note-assigned-input">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div class="input-field">
+          <label for="note-deed-input">Vincular a Escritura (Opcional)</label>
+          <select id="note-deed-input">
+            <option value="">Ninguna</option>
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div class="input-field">
+          <label>Elementos de Lista (Tareas / Checklist)</label>
+          <div class="checklist-builder" id="modal-checklist-builder">
+            <!-- Dyn items -->
+          </div>
+          <button type="button" class="btn btn-text" id="add-checklist-item-btn" style="align-self: flex-start; padding: 4px 8px; font-size: 13px;">+ Añadir elemento</button>
+        </div>
+
+        <div class="input-field">
+          <label>Color de Tarjeta</label>
+          <div class="color-selector" id="modal-color-selector">
+            <div class="color-dot card-color-1 selected" data-color="1"></div>
+            <div class="color-dot card-color-2" data-color="2"></div>
+            <div class="color-dot card-color-3" data-color="3"></div>
+            <div class="color-dot card-color-4" data-color="4"></div>
+            <div class="color-dot card-color-5" data-color="5"></div>
+            <div class="color-dot card-color-6" data-color="6"></div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
+          <button type="button" class="btn btn-text" id="delete-note-btn" style="color: var(--md-sys-color-error); display: none;">Eliminar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Password Prompt for Boss -->
+  <div class="modal-overlay" id="password-modal">
+    <div class="modal-content" style="width: 360px;">
+      <div class="modal-header">Acceso de Administrador</div>
+      <div class="input-field">
+        <label for="boss-password-input">Contraseña de Jefe</label>
+        <input type="password" id="boss-password-input" placeholder="Ingrese contraseña..." required>
+        <span id="password-error" style="color: var(--md-sys-color-error); font-size: 12px; display: none;">Contraseña incorrecta</span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-text" id="password-cancel-btn">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="password-submit-btn">Ingresar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Agregar/Editar Colaborador -->
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal-content">
+      <div class="modal-header" id="user-modal-title">Agregar Colaborador</div>
+      <form id="user-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <input type="hidden" id="user-id">
+        <div class="input-field">
+          <label for="user-name-input">Nombre Completo</label>
+          <input type="text" id="user-name-input" placeholder="Ej. Mariano Sanchez" required>
+        </div>
+        <div class="input-field">
+          <label for="user-password-input">Contraseña / Código de Acceso</label>
+          <input type="text" id="user-password-input" placeholder="Contraseña visible para asignarle" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service worker registrado con éxito.', reg))
+          .catch(err => console.warn('Error registrando service worker:', err));
+      });
+    }
+  </script>
+  <!-- Application JS Code -->
+  <script src="app.js"></script>
+</body>
+</html>
