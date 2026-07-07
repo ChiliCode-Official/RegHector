@@ -363,7 +363,7 @@ function performLogin(user) {
   const sdPrivate = document.getElementById('sd-private');
   const sdTask = document.getElementById('sd-task');
   
-  const isPrivileged = user.roles && (user.roles.includes('boss') || user.roles.includes('personal'));
+  const isPrivileged = user.roles && user.roles.includes('boss');
 
   if (user.roles && user.roles.includes('boss')) {
     if (navAdmin) navAdmin.style.display = 'flex';
