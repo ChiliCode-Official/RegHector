@@ -52,6 +52,7 @@ function loadData() {
   // Solo usamos LocalStorage como fallback offline temporal si Firebase tarda, pero NO como fuente de verdad ni para emular.
   const lUsers = localStorage.getItem('scriptura_users');
   const lPrivateNotes = localStorage.getItem('scriptura_private_notes');
+  const lNotes = localStorage.getItem('scriptura_notes');
   const lEvents = localStorage.getItem('scriptura_events');
   const lOffices = localStorage.getItem('scriptura_offices');
   const lTheme = localStorage.getItem('scriptura_theme');
