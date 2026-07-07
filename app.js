@@ -510,6 +510,20 @@ function switchScreen(screenId) {
       item.classList.remove('active');
     }
   });
+  
+  document.querySelectorAll('.bottom-nav-item').forEach(item => {
+    const target = item.id.replace('bar-switch-', '');
+    // Mapping bar-switch ids to screen names:
+    // private -> private-screen, tasks -> keep-screen, calendar -> calendar-screen, admin -> admin-screen
+    let match = false;
+    if (target === 'private' && screenId === 'private-screen') match = true;
+    if (target === 'tasks' && screenId === 'keep-screen') match = true;
+    if (target === 'calendar' && screenId === 'calendar-screen') match = true;
+    if (target === 'admin' && screenId === 'admin-screen') match = true;
+    
+    if (match) item.classList.add('active');
+    else item.classList.remove('active');
+  });
 
   const filterBar = document.querySelector('.filter-bar');
   if (filterBar) {
@@ -636,7 +650,13 @@ function renderPrivateNotes(filterText = '') {
 
   filtered.forEach(note => {
     const card = document.createElement('div');
-    card.className = `keep-card card-color-${note.color || '1'}`;
+    card.className = `keep-card`;
+    if (note.color && note.color.startsWith('#')) {
+      card.style.backgroundColor = note.color;
+      card.style.color = '#ffffff'; // Assume dark background for custom colors or just use white text
+    } else {
+      card.classList.add(`card-color-${note.color || '1'}`);
+    }
     
     let checklistHtml = '';
     let doneCount = 0;
@@ -731,7 +751,13 @@ function renderNotes(filterText = '') {
 
   filtered.forEach(note => {
     const card = document.createElement('div');
-    card.className = `keep-card card-color-${note.color || '1'}`;
+    card.className = `keep-card`;
+    if (note.color && note.color.startsWith('#')) {
+      card.style.backgroundColor = note.color;
+      card.style.color = '#ffffff';
+    } else {
+      card.classList.add(`card-color-${note.color || '1'}`);
+    }
     
     const assignedUsers = Array.isArray(note.assignedTo) 
       ? note.assignedTo.map(id => state.users.find(u => u.id === id)).filter(Boolean)
@@ -1011,11 +1037,14 @@ function openNoteModal(note = null, isPrivate = false) {
     document.getElementById('note-id').value = note.id;
     document.getElementById('note-title-input').value = note.title;
     
-    const assignedSelect = document.getElementById('note-assigned-input');
-    Array.from(assignedSelect.options).forEach(opt => {
-      opt.selected = Array.isArray(note.assignedTo) 
-        ? note.assignedTo.includes(opt.value)
-        : opt.value === note.assignedTo;
+    const assignedContainer = document.getElementById('note-assigned-input');
+    assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
+      const uid = badge.getAttribute('data-uid');
+      if (Array.isArray(note.assignedTo) ? note.assignedTo.includes(uid) : uid === note.assignedTo) {
+        badge.classList.add('selected');
+      } else {
+        badge.classList.remove('selected');
+      }
     });
 
     document.getElementById('note-office-input').value = note.office || '';
@@ -1025,7 +1054,14 @@ function openNoteModal(note = null, isPrivate = false) {
     currentChecklistItems = [...note.checklist.map(item => ({...item}))];
     
     document.querySelectorAll('#modal-color-selector .color-dot').forEach(dot => {
-      if (dot.getAttribute('data-color') === note.color) {
+      if (note.color && note.color.startsWith('#')) {
+        dot.classList.remove('selected');
+        if (dot.classList.contains('custom-color-dot')) {
+          dot.classList.add('selected');
+          dot.style.backgroundColor = note.color;
+          document.getElementById('note-custom-color').value = note.color;
+        }
+      } else if (dot.getAttribute('data-color') === note.color) {
         dot.classList.add('selected');
       } else {
         dot.classList.remove('selected');
@@ -1040,13 +1076,20 @@ function openNoteModal(note = null, isPrivate = false) {
     document.getElementById('note-add-calendar').checked = false;
     document.getElementById('note-comments-input').value = '';
     
-    const assignedSelect = document.getElementById('note-assigned-input');
-    Array.from(assignedSelect.options).forEach(opt => opt.selected = false);
+    const assignedContainer = document.getElementById('note-assigned-input');
+    assignedContainer.querySelectorAll('.user-badge').forEach(badge => badge.classList.remove('selected'));
     if (state.currentUser) {
-      Array.from(assignedSelect.options).forEach(opt => {
-        if(opt.value === state.currentUser.id) opt.selected = true;
+      assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
+        if(badge.getAttribute('data-uid') === state.currentUser.id) badge.classList.add('selected');
       });
     }
+  }
+
+  // Hide assignment if private note
+  if (isPrivate) {
+    document.getElementById('note-assign-wrapper').style.display = 'none';
+  } else {
+    document.getElementById('note-assign-wrapper').style.display = 'flex';
   }
   
   const isPersonal = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('personal');
@@ -1145,26 +1188,41 @@ document.getElementById('add-checklist-item-btn').addEventListener('click', () =
   renderModalChecklist();
 });
 
-document.querySelectorAll('#modal-color-selector .color-dot').forEach(dot => {
+document.querySelectorAll('#modal-color-selector .color-dot:not(.custom-color-dot)').forEach(dot => {
   dot.addEventListener('click', () => {
     document.querySelectorAll('#modal-color-selector .color-dot').forEach(d => d.classList.remove('selected'));
     dot.classList.add('selected');
   });
 });
 
+document.getElementById('note-custom-color').addEventListener('input', (e) => {
+  document.querySelectorAll('#modal-color-selector .color-dot').forEach(d => d.classList.remove('selected'));
+  const customDot = document.querySelector('.custom-color-dot');
+  customDot.classList.add('selected');
+  customDot.style.backgroundColor = e.target.value;
+  customDot.style.color = '#fff';
+});
+
 noteForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('note-id').value || 'n_' + Date.now();
   const title = document.getElementById('note-title-input').value;
-  const assignedSelect = document.getElementById('note-assigned-input');
-  const assignedTo = Array.from(assignedSelect.selectedOptions).map(opt => opt.value);
+  const assignedContainer = document.getElementById('note-assigned-input');
+  const assignedTo = currentNoteIsPrivate ? [state.currentUser.id] : Array.from(assignedContainer.querySelectorAll('.user-badge.selected')).map(b => b.getAttribute('data-uid'));
   const office = document.getElementById('note-office-input').value;
   const noteDate = document.getElementById('note-date-input').value;
   const addCalendar = document.getElementById('note-add-calendar').checked;
   const comments = document.getElementById('note-comments-input').value;
   
-  const selectedColorDot = document.querySelector('#modal-color-selector .color-dot.selected');
-  const color = selectedColorDot ? selectedColorDot.getAttribute('data-color') : '1';
+  const customColorInput = document.getElementById('note-custom-color');
+  const customColorDot = document.querySelector('.custom-color-dot');
+  let color = '1';
+  if (customColorDot && customColorDot.classList.contains('selected')) {
+    color = customColorInput.value;
+  } else {
+    const selectedColorDot = document.querySelector('#modal-color-selector .color-dot.selected');
+    if (selectedColorDot) color = selectedColorDot.getAttribute('data-color');
+  }
 
   const checklist = currentChecklistItems.filter(item => item.text.trim() !== '');
 
@@ -1271,14 +1329,21 @@ document.getElementById('delete-event-btn').addEventListener('click', () => {
 });
 
 function populateDropdowns() {
-  const assignSelect = document.getElementById('note-assigned-input');
-  if (assignSelect) {
-    assignSelect.innerHTML = '';
+  const assignContainer = document.getElementById('note-assigned-input');
+  if (assignContainer) {
+    assignContainer.innerHTML = '';
     state.users.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.id;
-      opt.textContent = u.name;
-      assignSelect.appendChild(opt);
+      const badge = document.createElement('div');
+      badge.className = 'user-badge';
+      badge.setAttribute('data-uid', u.id);
+      badge.innerHTML = `
+        <div class="user-badge-avatar">${u.name.charAt(0).toUpperCase()}</div>
+        <span class="user-badge-name">${u.name}</span>
+      `;
+      badge.addEventListener('click', () => {
+        badge.classList.toggle('selected');
+      });
+      assignContainer.appendChild(badge);
     });
   }
 

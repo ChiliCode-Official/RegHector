@@ -283,11 +283,11 @@
           <input type="text" id="note-title-input" placeholder="Título del pendiente...">
         </div>
         
-        <div class="input-field">
-          <label for="note-assigned-input">Asignar a Colaborador</label>
-          <select id="note-assigned-input" multiple style="height: auto; min-height: 80px;">
+        <div class="input-field" id="note-assign-wrapper">
+          <label>Asignar a Colaborador</label>
+          <div id="note-assigned-input" class="user-badge-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
             <!-- Dynamically populated -->
-          </select>
+          </div>
         </div>
 
         <div class="input-field">
@@ -330,6 +330,10 @@
             <div class="color-dot card-color-4" data-color="4"></div>
             <div class="color-dot card-color-5" data-color="5"></div>
             <div class="color-dot card-color-6" data-color="6"></div>
+            <div class="color-dot custom-color-dot" title="Color personalizado" style="display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;position:relative;">
+              +
+              <input type="color" id="note-custom-color" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">
+            </div>
           </div>
         </div>
 
