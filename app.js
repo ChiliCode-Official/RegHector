@@ -227,7 +227,7 @@ function syncDelete(collection, docId) {
     state.privateNotes = state.privateNotes.filter(n => n.id !== docId);
     renderPrivateNotes();
     localStorage.setItem('scriptura_private_notes', JSON.stringify(state.privateNotes));
-  if (collection === 'notes') {
+  } else if (collection === 'notes') {
     state.notes = state.notes.filter(n => n.id !== docId);
     renderNotes();
     localStorage.setItem('scriptura_notes', JSON.stringify(state.notes));
@@ -303,7 +303,6 @@ const loginPwdInput = document.getElementById('login-pwd-input');
 const loginErrorMsg = document.getElementById('login-error-msg');
 
 // Modals
-const noteModal = document.getElementById('note-modal');
 const noteModal = document.getElementById('note-modal');
 const noteForm = document.getElementById('note-form');
 const userModal = document.getElementById('user-modal');
@@ -907,6 +906,7 @@ function renderEventsForSelectedDay() {
   dayEvents.forEach(evt => {
     const card = document.createElement('div');
     card.className = 'event-item-card';
+    card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <span class="event-item-time">${evt.time ? evt.time + ' hrs' : 'Todo el día'}</span>
         ${evt.isPrivate ? `<span style="font-size: 11px; padding:2px 8px; border-radius:var(--shape-small); background-color: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">Privado</span>` : ''}
