@@ -363,20 +363,23 @@ function performLogin(user) {
   const barPrivate = document.getElementById('bar-switch-private');
   const sdPrivate = document.getElementById('sd-private');
   const sdTask = document.getElementById('sd-task');
+  const sdEvent = document.getElementById('sd-event');
+  const addEventBtn = document.getElementById('add-event-btn');
   
-  const isPrivileged = user.roles && user.roles.includes('boss');
+  const userRoles = user.roles || [user.role];
+  const isBoss = userRoles.includes('boss');
+  const isPersonal = userRoles.includes('personal');
+  const canCreateGeneral = isBoss || isPersonal;
 
-  if (user.roles && user.roles.includes('boss')) {
+  if (isBoss) {
     if (navAdmin) navAdmin.style.display = 'flex';
     if (barAdmin) barAdmin.style.display = 'flex';
-    if (sdTask) sdTask.style.display = 'flex';
   } else {
     if (navAdmin) navAdmin.style.display = 'none';
     if (barAdmin) barAdmin.style.display = 'none';
-    if (sdTask) sdTask.style.display = 'none'; // Only boss/personal create tasks? Wait, keep original logic for tasks
   }
 
-  if (isPrivileged) {
+  if (isBoss) {
     if (navPrivate) navPrivate.style.display = 'flex';
     if (barPrivate) barPrivate.style.display = 'flex';
     if (sdPrivate) sdPrivate.style.display = 'flex';
@@ -385,8 +388,18 @@ function performLogin(user) {
     if (barPrivate) barPrivate.style.display = 'none';
     if (sdPrivate) sdPrivate.style.display = 'none';
   }
+  
+  if (canCreateGeneral) {
+    if (sdTask) sdTask.style.display = 'flex';
+    if (sdEvent) sdEvent.style.display = 'flex';
+    if (addEventBtn) addEventBtn.style.display = 'block';
+  } else {
+    if (sdTask) sdTask.style.display = 'none';
+    if (sdEvent) sdEvent.style.display = 'none';
+    if (addEventBtn) addEventBtn.style.display = 'none';
+  }
 
-  if (isPrivileged) {
+  if (isBoss) {
     switchScreen('private-screen');
   } else {
     switchScreen('keep-screen');

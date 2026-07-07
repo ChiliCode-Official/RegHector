@@ -1088,8 +1088,8 @@ body {
   
  
 .modal-content {
-  max-height: 85vh;
-  overflow-y: auto;
+  max-height: 90dvh;
+  min-height: 0;
 }
 
 .user-badge {
