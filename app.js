@@ -359,8 +359,12 @@ function performLogin(user) {
   
   const navAdmin = document.getElementById('nav-admin-btn');
   const barAdmin = document.getElementById('bar-switch-admin');
+  const barPrivate = document.getElementById('bar-switch-private');
+  const sdPrivate = document.getElementById('sd-private');
   const sdTask = document.getElementById('sd-task');
   
+  const isPrivileged = user.roles && (user.roles.includes('boss') || user.roles.includes('personal'));
+
   if (user.roles && user.roles.includes('boss')) {
     if (navAdmin) navAdmin.style.display = 'flex';
     if (barAdmin) barAdmin.style.display = 'flex';
@@ -368,10 +372,22 @@ function performLogin(user) {
   } else {
     if (navAdmin) navAdmin.style.display = 'none';
     if (barAdmin) barAdmin.style.display = 'none';
-    if (sdTask) sdTask.style.display = 'none';
+    if (sdTask) sdTask.style.display = 'none'; // Only boss/personal create tasks? Wait, keep original logic for tasks
   }
 
-  switchScreen('private-screen');
+  if (isPrivileged) {
+    if (barPrivate) barPrivate.style.display = 'flex';
+    if (sdPrivate) sdPrivate.style.display = 'flex';
+  } else {
+    if (barPrivate) barPrivate.style.display = 'none';
+    if (sdPrivate) sdPrivate.style.display = 'none';
+  }
+
+  if (isPrivileged) {
+    switchScreen('private-screen');
+  } else {
+    switchScreen('keep-screen');
+  }
   updateMetrics();
   renderPrivateNotes();
   renderNotes();

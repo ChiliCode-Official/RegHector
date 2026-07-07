@@ -1130,12 +1130,13 @@ body {
 }
 
 .floating-btn.active {
-  color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary) !important;
+  background-color: transparent !important;
   transform: scale(1.1);
   font-weight: 700;
 }
 .floating-btn.active svg {
-  fill: var(--md-sys-color-primary);
+  fill: var(--md-sys-color-primary) !important;
 }
 
 @keyframes slideFadeUp {
