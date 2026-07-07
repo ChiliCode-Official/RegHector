@@ -1586,7 +1586,6 @@ function populateDropdowns() {
       });
     }
   }
-}
 
   const officeSelect = document.getElementById('note-office-input');
   if (officeSelect) {
