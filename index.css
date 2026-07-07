@@ -673,14 +673,17 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.4);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.55);
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 500;
+  z-index: 2000;
   backdrop-filter: blur(8px);
+  padding: 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .modal-overlay.active {
@@ -692,23 +695,35 @@ body {
   border-radius: var(--shape-large);
   padding: 24px;
   width: 550px;
-  max-width: 90%;
+  max-width: 100%;
+  max-height: calc(100% - 32px);
+  max-height: calc(100dvh - 32px);
   box-shadow: var(--elevation-3);
   display: flex;
   flex-direction: column;
   gap: 16px;
   border: 1px solid var(--md-sys-color-surface-variant);
+  margin: auto;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .modal-header {
   font-size: 20px;
   font-weight: 700;
   color: var(--md-sys-color-on-surface);
+  flex-shrink: 0;
 }
 
 .modal-body {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 8px 16px 8px;
+  margin-bottom: 8px;
 }
 
 .input-field {
@@ -1092,11 +1107,7 @@ body {
  } 
   
  
-.modal-content {
-  max-height: 90vh;
-  max-height: 90dvh;
-  min-height: 0;
-}
+/* Responsive height set in main modal-content block */
 
 .user-badge {
   display: flex;
