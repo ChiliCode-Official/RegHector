@@ -596,20 +596,37 @@ function updateMetrics() {
     statPrivateCount.textContent = state.privateNotes.length;
   }
   
-  const pendingTasks = state.notes.flatMap(n => n.checklist || []).filter(item => !item.done).length;
+  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
+  
+  let visibleNotes = state.notes;
+  if (!isBoss && state.currentUser) {
+    visibleNotes = state.notes.filter(note => {
+      if (Array.isArray(note.assignedTo)) {
+        return note.assignedTo.includes(state.currentUser.id);
+      }
+      return note.assignedTo === state.currentUser.id;
+    });
+  }
+  
+  const pendingTasks = visibleNotes.flatMap(n => n.checklist || []).filter(item => !item.done).length;
   document.getElementById('stat-tasks-count').textContent = pendingTasks;
   
   document.getElementById('stat-colabs-count').textContent = state.users.filter(u => !(u.roles || []).includes('boss')).length;
 
-  const totalNotes = state.notes.length;
-  const completedNotes = state.notes.filter(n => (n.checklist || []).length > 0 && (n.checklist || []).every(item => item.done)).length;
+  const totalNotes = visibleNotes.length;
+  const completedNotes = visibleNotes.filter(n => (n.checklist || []).length > 0 && (n.checklist || []).every(item => item.done)).length;
   const inProgressNotes = totalNotes - completedNotes;
-  const personalNotes = state.notes.filter(n => n.office === 'Personal').length;
+  const personalNotes = visibleNotes.filter(n => n.office === 'Personal').length;
 
   document.getElementById('badge-all').textContent = totalNotes;
   document.getElementById('badge-pending').textContent = inProgressNotes;
   document.getElementById('badge-completed').textContent = completedNotes;
   document.getElementById('badge-personal').textContent = personalNotes;
+  
+  const filterPersonalBtn = document.getElementById('filter-personal');
+  if (filterPersonalBtn) {
+    filterPersonalBtn.style.display = isBoss ? 'inline-block' : 'none';
+  }
 }
 
 // Filters
@@ -705,7 +722,12 @@ function renderPrivateNotes(filterText = '') {
 
     card.addEventListener('click', (e) => {
       if (!e.target.closest('.checklist-item')) {
-        openNoteModal(note, true);
+        const userRoles = state.currentUser.roles || [state.currentUser.role];
+        if (userRoles.includes('personal') && !userRoles.includes('boss')) {
+          openCommentModal(note, true);
+        } else {
+          openNoteModal(note, true);
+        }
       }
     });
 
@@ -817,7 +839,12 @@ function renderNotes(filterText = '') {
 
     card.addEventListener('click', (e) => {
       if (!e.target.closest('.checklist-item')) {
-        if (isBoss) {
+        const userRoles = state.currentUser.roles || [state.currentUser.role];
+        const isBoss = userRoles.includes('boss');
+        const isPersonal = userRoles.includes('personal');
+        if (isPersonal && !isBoss) {
+          openCommentModal(note, false);
+        } else {
           openNoteModal(note);
         }
       }
@@ -1031,6 +1058,65 @@ let currentCommentsList = [];
 
 let currentNoteIsPrivate = false;
 
+function openCommentModal(note, isPrivate = false) {
+  currentNoteIsPrivate = isPrivate;
+  document.getElementById('comment-modal-note-id').value = note.id;
+  document.getElementById('comment-modal-is-private').value = isPrivate ? 'true' : 'false';
+  document.getElementById('comment-only-input').value = '';
+  
+  if (note.commentsList) {
+    currentCommentsList = [...note.commentsList];
+  } else if (note.comments) {
+    currentCommentsList = [{ text: note.comments, authorName: 'Sistema', role: 'system', timestamp: Date.now() }];
+  } else {
+    currentCommentsList = [];
+  }
+  
+  renderCommentOnlyList();
+  document.getElementById('comment-modal').classList.add('active');
+}
+
+function renderCommentOnlyList() {
+  const container = document.getElementById('comment-only-list');
+  container.innerHTML = '';
+  if (currentCommentsList.length === 0) {
+    container.innerHTML = '<span style="opacity:0.5; font-size:13px; text-align:center;">No hay sugerencias aún...</span>';
+    return;
+  }
+  
+  currentCommentsList.forEach(c => {
+    const bubble = document.createElement('div');
+    const isBossComment = c.role === 'boss';
+    bubble.style.padding = '10px 14px';
+    bubble.style.borderRadius = '16px';
+    bubble.style.maxWidth = '85%';
+    bubble.style.fontSize = '14px';
+    bubble.style.lineHeight = '1.4';
+    bubble.style.position = 'relative';
+    
+    if (isBossComment) {
+      bubble.style.backgroundColor = 'var(--md-sys-color-primary)';
+      bubble.style.color = 'var(--md-sys-color-on-primary)';
+      bubble.style.alignSelf = 'flex-end';
+      bubble.style.borderBottomRightRadius = '4px';
+    } else {
+      bubble.style.backgroundColor = 'var(--md-sys-color-surface)';
+      bubble.style.color = 'var(--md-sys-color-on-surface)';
+      bubble.style.alignSelf = 'flex-start';
+      bubble.style.borderBottomLeftRadius = '4px';
+      bubble.style.border = '1px solid var(--md-sys-color-outline)';
+    }
+    
+    const timeStr = new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    bubble.innerHTML = `
+      <div style="font-size: 10px; opacity: 0.8; margin-bottom: 4px; font-weight: 600;">${c.authorName}  ${timeStr}</div>
+      <div>${c.text}</div>
+    `;
+    container.appendChild(bubble);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
 function openNoteModal(note = null, isPrivate = false) {
   currentNoteIsPrivate = isPrivate;
   noteForm.reset();
@@ -1183,7 +1269,8 @@ document.getElementById('note-comment-add-btn').addEventListener('click', () => 
   const input = document.getElementById('note-comment-new-input');
   const text = input.value.trim();
   if (text) {
-    const role = state.currentUser.roles.includes('boss') ? 'boss' : 'personal';
+    const userRoles = state.currentUser.roles || [state.currentUser.role];
+    const role = userRoles.includes('boss') ? 'boss' : 'personal';
     currentCommentsList.push({
       text: text,
       authorName: state.currentUser.name,
@@ -1192,6 +1279,38 @@ document.getElementById('note-comment-add-btn').addEventListener('click', () => 
     });
     input.value = '';
     renderCommentsList();
+  }
+});
+
+document.getElementById('comment-only-add-btn').addEventListener('click', () => {
+  const input = document.getElementById('comment-only-input');
+  const text = input.value.trim();
+  if (text) {
+    const userRoles = state.currentUser.roles || [state.currentUser.role];
+    const role = userRoles.includes('boss') ? 'boss' : 'personal';
+    currentCommentsList.push({
+      text: text,
+      authorName: state.currentUser.name,
+      role: role,
+      timestamp: Date.now()
+    });
+    input.value = '';
+    renderCommentOnlyList();
+    
+    // Auto-save instantly for the comment-only modal
+    const noteId = document.getElementById('comment-modal-note-id').value;
+    const isPrivate = document.getElementById('comment-modal-is-private').value === 'true';
+    const targetCollection = isPrivate ? state.privateNotes : state.notes;
+    const matchedNote = targetCollection.find(n => n.id === noteId);
+    
+    if (matchedNote) {
+      const data = { ...matchedNote, commentsList: currentCommentsList };
+      if (isPrivate) {
+        syncSave('private_notes', noteId, data);
+      } else {
+        syncSave('notes', noteId, data);
+      }
+    }
   }
 });
 
@@ -1333,11 +1452,12 @@ noteForm.addEventListener('submit', (e) => {
   const date = matchedNote && !noteDate ? matchedNote.date : dateStr;
 
   const isNew = !matchedNote;
-  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
+  const userRoles = state.currentUser && (state.currentUser.roles || [state.currentUser.role]);
+  const isBoss = userRoles && userRoles.includes('boss');
   let data = { id, title, assignedTo, office, color, checklist, date, commentsList: currentCommentsList };
   
   if (!isBoss && matchedNote) {
-    data = { ...matchedNote, commentsList: currentCommentsList }; // Solo permite agregar comentarios a staff
+    data = { ...matchedNote, checklist: checklist, commentsList: currentCommentsList }; // Guarda solo avances y comentarios
   }
 
   if (currentNoteIsPrivate) {

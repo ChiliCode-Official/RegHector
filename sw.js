@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hector-tasks-v24';
+const CACHE_NAME = 'hector-tasks-v27';
 const ASSETS = [
   './',
   './index.html',

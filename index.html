@@ -356,6 +356,27 @@
     </div>
   </div>
 
+  <!-- Modal 2.5: Comment Only Modal (For Personal role) -->
+  <div class="modal-overlay" id="comment-modal">
+    <div class="modal-content" style="width: 500px;">
+      <div class="modal-header" id="comment-modal-title">Añadir Comentario</div>
+      <input type="hidden" id="comment-modal-note-id">
+      <input type="hidden" id="comment-modal-is-private">
+      <div class="modal-body" style="overflow-y: auto; max-height: 50vh; display: flex; flex-direction: column; gap: 16px;">
+        <div id="comment-only-list" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; background: var(--md-sys-color-surface-variant); border-radius: var(--shape-medium); min-height: 100px;">
+          <!-- Dynamic comment bubbles -->
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <input type="text" id="comment-only-input" placeholder="Escribe un comentario..." style="flex: 1; padding: 10px; border-radius: var(--shape-small); border: 1px solid var(--md-sys-color-outline);">
+          <button type="button" class="btn btn-primary" id="comment-only-add-btn" style="padding: 10px 16px;">Añadir</button>
+        </div>
+      </div>
+      <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--md-sys-color-surface-variant);">
+        <button type="button" class="btn btn-text modal-close-btn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal 3: Password Prompt for Boss -->
   <div class="modal-overlay" id="password-modal">
     <div class="modal-content" style="width: 360px;">
