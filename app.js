@@ -1194,9 +1194,13 @@ function openNoteModal(note = null, isPrivate = false) {
     renderCommentsList();
     
     const assignedContainer = document.getElementById('note-assigned-input');
+    const isPersonalUser = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('personal');
     assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
       badge.classList.remove('selected');
-      if (state.currentUser && badge.getAttribute('data-uid') === state.currentUser.id) {
+      const uid = badge.getAttribute('data-uid');
+      if (isPersonalUser) {
+        if (uid === 'boss') badge.classList.add('selected');
+      } else if (state.currentUser && uid === state.currentUser.id) {
         badge.classList.add('selected');
       }
       badge.style.display = 'flex';
@@ -1545,7 +1549,20 @@ function populateDropdowns() {
       '#ffca28', '#ffa726', '#8d6e63'
     ];
 
+    const isPersonalUser = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('personal');
+
     state.users.forEach((u) => {
+      // The user creating/editing the task (current logged-in user) should not appear in the assignment list
+      if (state.currentUser && u.id === state.currentUser.id) {
+        return;
+      }
+
+      // If logged-in user has 'personal' role, they can only assign tasks to Hector (boss/admin role)
+      if (isPersonalUser) {
+        const isHector = u.id === 'boss' || (u.roles && u.roles.includes('boss')) || u.name.toLowerCase().includes('hector');
+        if (!isHector) return;
+      }
+
       const charCodeSum = u.name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
       const avatarColor = avatarColors[charCodeSum % avatarColors.length];
 
