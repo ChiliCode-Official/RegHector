@@ -34,8 +34,8 @@ if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "") {
 let state = {
   currentUser: null,
   users: [],
-  deeds: [],
   notes: [],
+  privateNotes: [],
   events: [], 
   offices: ['Notaría 134', 'Notaría 160', 'Personal'], 
   theme: 'light',
@@ -51,14 +51,13 @@ function loadData() {
 
   // Solo usamos LocalStorage como fallback offline temporal si Firebase tarda, pero NO como fuente de verdad ni para emular.
   const lUsers = localStorage.getItem('scriptura_users');
-  const lDeeds = localStorage.getItem('scriptura_deeds');
-  const lNotes = localStorage.getItem('scriptura_notes');
+  const lPrivateNotes = localStorage.getItem('scriptura_private_notes');
   const lEvents = localStorage.getItem('scriptura_events');
   const lOffices = localStorage.getItem('scriptura_offices');
   const lTheme = localStorage.getItem('scriptura_theme');
 
   state.users = lUsers ? JSON.parse(lUsers) : [];
-  state.deeds = lDeeds ? JSON.parse(lDeeds) : [];
+  state.privateNotes = lPrivateNotes ? JSON.parse(lPrivateNotes) : [];
   state.notes = lNotes ? JSON.parse(lNotes) : [];
   state.events = lEvents ? JSON.parse(lEvents) : [];
   state.offices = lOffices ? JSON.parse(lOffices) : ['Notaría 134', 'Notaría 160', 'Personal'];
@@ -115,19 +114,23 @@ function loadData() {
       }
     });
 
-    // 2. Listen to Deeds
-    db.collection('deeds').onSnapshot(snapshot => {
+    // 2. Listen to Private Notes (Only for Boss)
+    // We attach this conditionally or just listen and handle permissions via rules if any.
+    // Assuming UI filters it or boss logs in. We can attach it globally, and if it fails due to permissions, it just logs warning.
+    // Since there are no strict roles in this mock backend, we just listen to it.
+    db.collection('private_notes').onSnapshot(snapshot => {
       if (!snapshot.empty) {
-        const deedsList = [];
-        snapshot.forEach(doc => deedsList.push(doc.data()));
-        state.deeds = deedsList;
-        localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
+        const pNotesList = [];
+        snapshot.forEach(doc => pNotesList.push(doc.data()));
+        state.privateNotes = pNotesList;
+        localStorage.setItem('scriptura_private_notes', JSON.stringify(state.privateNotes));
       } else {
-        state.deeds = [];
+        state.privateNotes = [];
       }
-      renderDeeds();
-      populateDropdowns();
+      renderPrivateNotes();
       updateMetrics();
+    }, err => {
+      console.warn("No permission to read private_notes or error:", err);
     });
 
     // 3. Listen to Notes
@@ -183,13 +186,12 @@ function syncSave(collection, docId, data) {
     populateDropdowns();
     renderLoginUsers();
     localStorage.setItem('scriptura_users', JSON.stringify(state.users));
-  } else if (collection === 'deeds') {
-    const index = state.deeds.findIndex(d => d.id === docId);
-    if (index !== -1) state.deeds[index] = data;
-    else state.deeds.push(data);
-    renderDeeds();
-    populateDropdowns();
-    localStorage.setItem('scriptura_deeds', JSON.stringify(state.deeds));
+  } else if (collection === 'private_notes') {
+    const index = state.privateNotes.findIndex(d => d.id === docId);
+    if (index !== -1) state.privateNotes[index] = data;
+    else state.privateNotes.push(data);
+    renderPrivateNotes();
+    localStorage.setItem('scriptura_private_notes', JSON.stringify(state.privateNotes));
   } else if (collection === 'notes') {
     const index = state.notes.findIndex(n => n.id === docId);
     if (index !== -1) state.notes[index] = data;
@@ -215,6 +217,16 @@ function syncSave(collection, docId, data) {
 
 function syncDelete(collection, docId) {
   // Update local state instantly
+  if (collection === 'users') {
+    state.users = state.users.filter(u => u.id !== docId);
+    renderUsersTable();
+    populateDropdowns();
+    renderLoginUsers();
+    localStorage.setItem('scriptura_users', JSON.stringify(state.users));
+  } else if (collection === 'private_notes') {
+    state.privateNotes = state.privateNotes.filter(n => n.id !== docId);
+    renderPrivateNotes();
+    localStorage.setItem('scriptura_private_notes', JSON.stringify(state.privateNotes));
   if (collection === 'notes') {
     state.notes = state.notes.filter(n => n.id !== docId);
     renderNotes();
@@ -239,16 +251,15 @@ function triggerNotification(note, isNew = true) {
   if (!WEBHOOK_URL || WEBHOOK_URL.includes("YOUR_MAKE")) return;
 
   const assignedUser = state.users.find(u => u.id === note.assignedTo);
-  const linkedDeed = state.deeds.find(d => d.id === note.deedId);
-  const checklistStr = note.checklist.map(item => `- [${item.done ? 'x' : ' '}] ${item.text}`).join('\n');
+  const checklistStr = note.checklist ? note.checklist.map(item => `- [${item.done ? 'x' : ' '}] ${item.text}`).join('\n') : '';
 
   const payload = {
     event: isNew ? 'task_assigned' : 'task_updated',
     task_id: note.id,
     title: note.title,
     assigned_name: assignedUser ? assignedUser.name : 'Sin Asignar',
-    deed_number: linkedDeed ? linkedDeed.number : 'N/A',
-    deed_title: linkedDeed ? linkedDeed.title : 'N/A',
+    deed_number: 'N/A',
+    deed_title: 'N/A',
     office: note.office || 'General',
     date: note.date,
     checklist: checklistStr,
@@ -275,7 +286,7 @@ function triggerNotification(note, isNew = true) {
 // DOM Elements
 const loginScreen = document.getElementById('login-screen');
 const appContainer = document.getElementById('app-container');
-const deedsContainer = document.getElementById('deeds-container');
+const privateContainer = document.getElementById('private-container');
 const notesContainer = document.getElementById('notes-container');
 const usersTableBody = document.getElementById('users-table-body');
 const searchInput = document.getElementById('search-input');
@@ -292,8 +303,7 @@ const loginPwdInput = document.getElementById('login-pwd-input');
 const loginErrorMsg = document.getElementById('login-error-msg');
 
 // Modals
-const deedModal = document.getElementById('deed-modal');
-const deedForm = document.getElementById('deed-form');
+const noteModal = document.getElementById('note-modal');
 const noteModal = document.getElementById('note-modal');
 const noteForm = document.getElementById('note-form');
 const userModal = document.getElementById('user-modal');
@@ -361,9 +371,9 @@ function performLogin(user) {
     if (sdTask) sdTask.style.display = 'none';
   }
 
-  switchScreen('deeds-screen');
+  switchScreen('private-screen');
   updateMetrics();
-  renderDeeds();
+  renderPrivateNotes();
   renderNotes();
   renderCalendar();
   renderEventsForSelectedDay();
@@ -483,8 +493,8 @@ function switchScreen(screenId) {
   if (targetScreen) targetScreen.classList.add('active');
   
   const headerTitle = document.getElementById('dashboard-title-text');
-  if (screenId === 'deeds-screen') {
-    headerTitle.textContent = 'Operación Diaria';
+  if (screenId === 'private-screen') {
+    headerTitle.textContent = 'Pendientes Personales';
   } else if (screenId === 'keep-screen') {
     headerTitle.textContent = 'Tareas y Pendientes';
   } else if (screenId === 'calendar-screen') {
@@ -513,8 +523,8 @@ function switchScreen(screenId) {
   document.querySelectorAll('.floating-btn').forEach(btn => {
     btn.classList.remove('active');
   });
-  if (screenId === 'deeds-screen') {
-    document.getElementById('bar-switch-deeds').classList.add('active');
+  if (screenId === 'private-screen') {
+    document.getElementById('bar-switch-private').classList.add('active');
     globalFab.style.display = 'flex';
   } else if (screenId === 'keep-screen') {
     document.getElementById('bar-switch-tasks').classList.add('active');
@@ -535,7 +545,7 @@ navItems.forEach(item => {
   });
 });
 
-document.getElementById('bar-switch-deeds').addEventListener('click', () => switchScreen('deeds-screen'));
+document.getElementById('bar-switch-private').addEventListener('click', () => switchScreen('private-screen'));
 document.getElementById('bar-switch-tasks').addEventListener('click', () => switchScreen('keep-screen'));
 document.getElementById('bar-switch-calendar').addEventListener('click', () => switchScreen('calendar-screen'));
 document.getElementById('bar-switch-admin').addEventListener('click', () => switchScreen('admin-screen'));
@@ -559,9 +569,11 @@ function applyTheme() {
   }
 }
 
-// Metrics Update
 function updateMetrics() {
-  document.getElementById('stat-deeds-count').textContent = state.deeds.length;
+  const statPrivateCount = document.getElementById('stat-private-count');
+  if (statPrivateCount) {
+    statPrivateCount.textContent = state.privateNotes.length;
+  }
   
   const pendingTasks = state.notes.flatMap(n => n.checklist || []).filter(item => !item.done).length;
   document.getElementById('stat-tasks-count').textContent = pendingTasks;
@@ -601,36 +613,86 @@ function setActiveFilter(element, filterType) {
   renderNotes(query);
 }
 
-// Render Deeds
-function renderDeeds(filterText = '') {
-  deedsContainer.innerHTML = '';
-  const filtered = state.deeds.filter(d => 
-    d.number.toLowerCase().includes(filterText.toLowerCase()) ||
-    d.title.toLowerCase().includes(filterText.toLowerCase()) ||
-    d.client.toLowerCase().includes(filterText.toLowerCase())
-  );
-
-  if (filtered.length === 0) {
-    deedsContainer.innerHTML = `<div style="text-align:center; padding:48px; opacity:0.5;">No se encontraron escrituras registradas.</div>`;
+// Render Private Notes (Boss only)
+function renderPrivateNotes(filterText = '') {
+  if (!privateContainer) return;
+  privateContainer.innerHTML = '';
+  
+  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
+  if (!isBoss) {
+    privateContainer.innerHTML = `<div style="text-align:center; padding:48px; opacity:0.5; grid-column: 1/-1;">Acceso restringido.</div>`;
     return;
   }
 
-  filtered.forEach(deed => {
+  const filtered = state.privateNotes.filter(note => {
+    return (note.title || '').toLowerCase().includes(filterText.toLowerCase()) ||
+           (note.checklist || []).some(item => (item.text || '').toLowerCase().includes(filterText.toLowerCase()));
+  });
+
+  if (filtered.length === 0) {
+    privateContainer.innerHTML = `<div style="text-align:center; padding:48px; opacity:0.5; grid-column: 1/-1;">No tienes pendientes privados.</div>`;
+    return;
+  }
+
+  filtered.forEach(note => {
     const card = document.createElement('div');
-    card.className = 'deed-row';
+    card.className = `keep-card card-color-${note.color || '1'}`;
+    
+    let checklistHtml = '';
+    let doneCount = 0;
+    const checklistArr = note.checklist || [];
+    checklistArr.forEach((item, index) => {
+      if (item.done) doneCount++;
+      checklistHtml += `
+        <li class="checklist-item ${item.done ? 'done' : ''}" onclick="togglePrivateChecklistItem(event, '${note.id}', ${index})">
+          <input type="checkbox" ${item.done ? 'checked' : ''} style="pointer-events:none;">
+          <span>${item.text}</span>
+        </li>
+      `;
+    });
+
+    const progressPercent = checklistArr.length > 0 ? (doneCount / checklistArr.length) * 100 : 0;
+
     card.innerHTML = `
-      <div class="deed-main">
-        <span class="deed-number">ESCRITURA #${deed.number}</span>
-        <span class="deed-title">${deed.title}</span>
-        <span class="deed-client">Cliente: <strong>${deed.client}</strong></span>
+      <div class="keep-card-header">
+        <span class="keep-card-category">Pendiente Privado</span>
+        <div class="card-action-dot">···</div>
       </div>
-      <div class="deed-meta">
-        <span class="deed-status status-${deed.status}">${deed.status === 'pendiente' ? 'Pendiente firma' : deed.status === 'revision' ? 'En revisión' : 'Firmado'}</span>
+      <div class="keep-card-title">${note.title || '<em>Sin Título</em>'}</div>
+      
+      <div style="width:100%; height:4px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden; margin-top:-4px;">
+        <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
+      </div>
+
+      <ul class="card-checklist">
+        ${checklistHtml}
+      </ul>
+
+      <div class="card-footer">
+        <div class="card-footer-info">
+          <span class="card-footer-name">Solo Administrador</span>
+          <span class="card-footer-date">${note.date || 'Hoy'}</span>
+        </div>
       </div>
     `;
-    card.addEventListener('click', () => openDeedModal(deed));
-    deedsContainer.appendChild(card);
+
+    card.addEventListener('click', (e) => {
+      if (!e.target.closest('.checklist-item')) {
+        openNoteModal(note, true);
+      }
+    });
+
+    privateContainer.appendChild(card);
   });
+}
+
+function togglePrivateChecklistItem(e, noteId, index) {
+  e.stopPropagation();
+  const note = state.privateNotes.find(n => n.id === noteId);
+  if (note) {
+    note.checklist[index].done = !note.checklist[index].done;
+    syncSave('private_notes', noteId, note);
+  }
 }
 
 // Render Notes/Tasks Grid
@@ -674,7 +736,6 @@ function renderNotes(filterText = '') {
     const assignedUsers = Array.isArray(note.assignedTo) 
       ? note.assignedTo.map(id => state.users.find(u => u.id === id)).filter(Boolean)
       : [state.users.find(u => u.id === note.assignedTo)].filter(Boolean);
-    const linkedDeed = state.deeds.find(d => d.id === note.deedId);
     
     let checklistHtml = '';
     let doneCount = 0;
@@ -697,7 +758,7 @@ function renderNotes(filterText = '') {
 
     card.innerHTML = `
       <div class="keep-card-header">
-        <span class="keep-card-category">${note.office || 'General'} ${linkedDeed ? `• Esc. #${linkedDeed.number}` : ''}</span>
+        <span class="keep-card-category">${note.office || 'General'}</span>
         <div class="card-action-dot">···</div>
       </div>
       <div class="keep-card-title">${note.title || '<em>Sin Título</em>'}</div>
@@ -790,13 +851,17 @@ function renderCalendar() {
     cell.textContent = day;
     
     const thisDateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const selectedDateStr = state.selectedCalendarDate.toISOString().split('T')[0];
+    
+    const sDate = state.selectedCalendarDate;
+    const selectedDateStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
     
     if (thisDateStr === selectedDateStr) {
       cell.classList.add('active');
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const tDate = new Date();
+    const todayStr = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}-${String(tDate.getDate()).padStart(2, '0')}`;
+    
     if (thisDateStr === todayStr) {
       cell.classList.add('today');
     }
@@ -826,8 +891,9 @@ function renderEventsForSelectedDay() {
 
   container.innerHTML = '';
   
-  const selectedStr = state.selectedCalendarDate.toISOString().split('T')[0];
-  const formattedDay = `${state.selectedCalendarDate.getDate()} de ${MONTHS_SPANISH[state.selectedCalendarDate.getMonth()]}`;
+  const sDate = state.selectedCalendarDate;
+  const selectedStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
+  const formattedDay = `${sDate.getDate()} de ${MONTHS_SPANISH[sDate.getMonth()]}`;
   dayTitle.textContent = `Eventos - ${formattedDay}`;
 
   const dayEvents = state.events.filter(e => e.date === selectedStr);
@@ -841,12 +907,9 @@ function renderEventsForSelectedDay() {
   dayEvents.forEach(evt => {
     const card = document.createElement('div');
     card.className = 'event-item-card';
-    const linkedDeed = state.deeds.find(d => d.id === evt.deedId);
-    
-    card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span class="event-item-time">${evt.time} hrs</span>
-        ${linkedDeed ? `<span style="font-size: 11px; padding:2px 8px; border-radius:var(--shape-small); background-color: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container);">Esc. #${linkedDeed.number}</span>` : ''}
+        <span class="event-item-time">${evt.time ? evt.time + ' hrs' : 'Todo el día'}</span>
+        ${evt.isPrivate ? `<span style="font-size: 11px; padding:2px 8px; border-radius:var(--shape-small); background-color: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">Privado</span>` : ''}
       </div>
       <div class="event-item-title">${evt.title}</div>
       ${evt.desc ? `<p style="font-size:12px; opacity:0.7;">${evt.desc}</p>` : ''}
@@ -931,24 +994,10 @@ if (addOfficeForm) {
 // Modal Form handling
 let currentChecklistItems = [];
 
-function openDeedModal(deed = null) {
-  deedForm.reset();
-  if (deed) {
-    document.getElementById('deed-modal-title').textContent = 'Editar Escritura';
-    document.getElementById('deed-id').value = deed.id;
-    document.getElementById('deed-number-input').value = deed.number;
-    document.getElementById('deed-title-input').value = deed.title;
-    document.getElementById('deed-client-input').value = deed.client;
-    document.getElementById('deed-status-input').value = deed.status;
-    document.getElementById('deed-desc-input').value = deed.desc || '';
-  } else {
-    document.getElementById('deed-modal-title').textContent = 'Nueva Escritura';
-    document.getElementById('deed-id').value = '';
-  }
-  deedModal.classList.add('active');
-}
+let currentNoteIsPrivate = false;
 
-function openNoteModal(note = null) {
+function openNoteModal(note = null, isPrivate = false) {
+  currentNoteIsPrivate = isPrivate;
   noteForm.reset();
   currentChecklistItems = [];
   
@@ -969,7 +1018,8 @@ function openNoteModal(note = null) {
     });
 
     document.getElementById('note-office-input').value = note.office || '';
-    document.getElementById('note-deed-input').value = note.deedId || '';
+    document.getElementById('note-date-input').value = note.date || '';
+    document.getElementById('note-add-calendar').checked = false;
     
     currentChecklistItems = [...note.checklist.map(item => ({...item}))];
     
@@ -984,8 +1034,9 @@ function openNoteModal(note = null) {
     document.getElementById('note-comments-input').value = note.comments || '';
     document.getElementById('delete-note-btn').style.display = 'block';
   } else {
-    document.getElementById('note-modal-title').textContent = 'Crear Nota / Tarea';
     document.getElementById('note-id').value = '';
+    document.getElementById('note-date-input').value = '';
+    document.getElementById('note-add-calendar').checked = false;
     document.getElementById('note-comments-input').value = '';
     
     const assignedSelect = document.getElementById('note-assigned-input');
@@ -1050,14 +1101,15 @@ function openEventModal(evt = null) {
     document.getElementById('event-id').value = evt.id;
     document.getElementById('event-title-input').value = evt.title;
     document.getElementById('event-date-input').value = evt.date;
-    document.getElementById('event-time-input').value = evt.time;
-    document.getElementById('event-deed-input').value = evt.deedId || '';
+    document.getElementById('event-time-input').value = evt.time || '';
+    document.getElementById('event-privacy-input').value = evt.isPrivate ? 'private' : 'public';
     document.getElementById('event-desc-input').value = evt.desc || '';
     document.getElementById('delete-event-btn').style.display = 'block';
   } else {
     document.getElementById('event-modal-title').textContent = 'Nueva Cita / Firma';
     document.getElementById('event-id').value = '';
-    const selectedDateStr = state.selectedCalendarDate.toISOString().split('T')[0];
+    const sDate = state.selectedCalendarDate;
+    const selectedDateStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
     document.getElementById('event-date-input').value = selectedDateStr;
   }
   eventModal.classList.add('active');
@@ -1099,20 +1151,6 @@ document.querySelectorAll('#modal-color-selector .color-dot').forEach(dot => {
   });
 });
 
-deedForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const id = document.getElementById('deed-id').value || 'd_' + Date.now();
-  const number = document.getElementById('deed-number-input').value;
-  const title = document.getElementById('deed-title-input').value;
-  const client = document.getElementById('deed-client-input').value;
-  const status = document.getElementById('deed-status-input').value;
-  const desc = document.getElementById('deed-desc-input').value;
-
-  const data = { id, number, title, client, status, desc };
-  syncSave('deeds', id, data);
-  deedModal.classList.remove('active');
-});
-
 noteForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const id = document.getElementById('note-id').value || 'n_' + Date.now();
@@ -1120,7 +1158,8 @@ noteForm.addEventListener('submit', (e) => {
   const assignedSelect = document.getElementById('note-assigned-input');
   const assignedTo = Array.from(assignedSelect.selectedOptions).map(opt => opt.value);
   const office = document.getElementById('note-office-input').value;
-  const deedId = document.getElementById('note-deed-input').value;
+  const noteDate = document.getElementById('note-date-input').value;
+  const addCalendar = document.getElementById('note-add-calendar').checked;
   const comments = document.getElementById('note-comments-input').value;
   
   const selectedColorDot = document.querySelector('#modal-color-selector .color-dot.selected');
@@ -1131,37 +1170,56 @@ noteForm.addEventListener('submit', (e) => {
   // Borrar si está vacío
   if (title.trim() === '' && checklist.length === 0) {
     if (document.getElementById('note-id').value) {
-      syncDelete('notes', id);
+      if (currentNoteIsPrivate) syncDelete('private_notes', id);
+      else syncDelete('notes', id);
     }
     noteModal.classList.remove('active');
     return;
   }
 
   const today = new Date();
-  const dateStr = `${today.getDate()}.${today.getMonth()+1}.${String(today.getFullYear()).slice(-2)}`;
+  const dateStr = noteDate ? noteDate : `${today.getDate()}.${today.getMonth()+1}.${String(today.getFullYear()).slice(-2)}`;
   
-  const matchedNote = state.notes.find(n => n.id === id);
-  const date = matchedNote ? matchedNote.date : dateStr;
+  const targetCollection = currentNoteIsPrivate ? state.privateNotes : state.notes;
+  const matchedNote = targetCollection.find(n => n.id === id);
+  const date = matchedNote && !noteDate ? matchedNote.date : dateStr;
 
   const isNew = !matchedNote;
-
-  // Preserve other properties if editing as Personal (so they don't overwrite title/checklist if they somehow hacked the UI)
   const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
-  let data = { id, title, assignedTo, office, deedId, color, checklist, date, comments };
+  let data = { id, title, assignedTo, office, color, checklist, date, comments };
   
   if (!isBoss && matchedNote) {
-    data = { ...matchedNote, comments: comments }; // Only allow updating comments
+    data = { ...matchedNote, comments: comments }; // Solo permite comentar a staff
   }
 
-  syncSave('notes', id, data);
-  triggerNotification(data, isNew);
+  if (currentNoteIsPrivate) {
+    syncSave('private_notes', id, data);
+  } else {
+    syncSave('notes', id, data);
+    triggerNotification(data, isNew);
+  }
+
+  if (addCalendar && noteDate) {
+    const eventId = 'e_' + Date.now();
+    const eventData = { 
+      id: eventId, 
+      title: title || 'Tarea: ' + checklist[0]?.text, 
+      date: noteDate, 
+      time: '', 
+      desc: comments,
+      isPrivate: currentNoteIsPrivate 
+    };
+    syncSave('events', eventId, eventData);
+  }
+
   noteModal.classList.remove('active');
 });
 
 document.getElementById('delete-note-btn').addEventListener('click', () => {
   const id = document.getElementById('note-id').value;
   if (id) {
-    syncDelete('notes', id);
+    if (currentNoteIsPrivate) syncDelete('private_notes', id);
+    else syncDelete('notes', id);
     noteModal.classList.remove('active');
   }
 });
@@ -1195,10 +1253,10 @@ eventForm.addEventListener('submit', (e) => {
   const title = document.getElementById('event-title-input').value;
   const date = document.getElementById('event-date-input').value;
   const time = document.getElementById('event-time-input').value;
-  const deedId = document.getElementById('event-deed-input').value;
+  const isPrivate = document.getElementById('event-privacy-input').value === 'private';
   const desc = document.getElementById('event-desc-input').value;
 
-  const data = { id, title, date, time, deedId, desc };
+  const data = { id, title, date, time, isPrivate, desc };
   syncSave('events', id, data);
   eventModal.classList.remove('active');
 });
@@ -1234,18 +1292,7 @@ function populateDropdowns() {
     });
   }
 
-  const deedSelects = [document.getElementById('note-deed-input'), document.getElementById('event-deed-input')];
-  deedSelects.forEach(deedSelect => {
-    if (deedSelect) {
-      deedSelect.innerHTML = '<option value="">Ninguna</option>';
-      state.deeds.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.id;
-        opt.textContent = `Esc. #${d.number} - ${d.title}`;
-        deedSelect.appendChild(opt);
-      });
-    }
-  });
+  // Removing deedSelects population logic as deeds are gone
 }
 
 // Global floating '+' Speed Dial toggle logic
@@ -1274,8 +1321,8 @@ window.triggerSpeedDial = function(screenId) {
   speedDialMenu.classList.remove('active');
   if (globalFab) globalFab.style.transform = 'rotate(0deg)';
   switchScreen(screenId);
-  if (screenId === 'deeds-screen') {
-    openDeedModal();
+  if (screenId === 'private-screen') {
+    openNoteModal(null, true);
   } else if (screenId === 'keep-screen') {
     openNoteModal();
   } else if (screenId === 'calendar-screen') {
@@ -1284,7 +1331,7 @@ window.triggerSpeedDial = function(screenId) {
 };
 
 // Wire Speed Dial actions directly
-document.getElementById('sd-deed').addEventListener('click', () => triggerSpeedDial('deeds-screen'));
+document.getElementById('sd-private').addEventListener('click', () => triggerSpeedDial('private-screen'));
 document.getElementById('sd-task').addEventListener('click', () => triggerSpeedDial('keep-screen'));
 document.getElementById('sd-event').addEventListener('click', () => triggerSpeedDial('calendar-screen'));
 
@@ -1305,7 +1352,7 @@ document.querySelectorAll('.modal-close-btn').forEach(btn => {
 if (searchInput) {
   searchInput.addEventListener('input', (e) => {
     const query = e.target.value;
-    renderDeeds(query);
+    renderPrivateNotes(query);
     renderNotes(query);
   });
 }
@@ -1313,7 +1360,7 @@ if (searchInput) {
 // --- Swipe Gestures for Mobile ---
 let touchStartX = 0;
 let touchEndX = 0;
-const screenOrder = ['deeds-screen', 'keep-screen', 'calendar-screen', 'admin-screen'];
+const screenOrder = ['private-screen', 'keep-screen', 'calendar-screen', 'admin-screen'];
 
 appContainer.addEventListener('touchstart', e => {
   // Ignore swipe if touching a modal or horizontal scroll

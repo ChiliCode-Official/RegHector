@@ -339,6 +339,14 @@ body {
   display: block;
 }
 
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  min-height: 480px;
+  align-items: start;
+}
+
 /* Keep Cards Layout */
 .keep-grid {
   display: grid;
@@ -927,12 +935,26 @@ body {
     bottom: 16px;
   }
   .dashboard-stats {
-    gap: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
   }
   .top-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+  }
+  .filter-bar {
+    flex-wrap: wrap;
+  }
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+  .modal-content {
+    padding: 20px;
+    width: 95%;
+  }
+  .login-card {
+    padding: 24px;
   }
 }
 /* Calendar Styling */
