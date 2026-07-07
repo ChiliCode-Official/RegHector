@@ -511,19 +511,7 @@ function switchScreen(screenId) {
     }
   });
   
-  document.querySelectorAll('.bottom-nav-item').forEach(item => {
-    const target = item.id.replace('bar-switch-', '');
-    // Mapping bar-switch ids to screen names:
-    // private -> private-screen, tasks -> keep-screen, calendar -> calendar-screen, admin -> admin-screen
-    let match = false;
-    if (target === 'private' && screenId === 'private-screen') match = true;
-    if (target === 'tasks' && screenId === 'keep-screen') match = true;
-    if (target === 'calendar' && screenId === 'calendar-screen') match = true;
-    if (target === 'admin' && screenId === 'admin-screen') match = true;
-    
-    if (match) item.classList.add('active');
-    else item.classList.remove('active');
-  });
+  // Old nav sync logic removed. Using floating-btn instead.
 
   const filterBar = document.querySelector('.filter-bar');
   if (filterBar) {
@@ -1026,6 +1014,8 @@ let currentNoteIsPrivate = false;
 function openNoteModal(note = null, isPrivate = false) {
   currentNoteIsPrivate = isPrivate;
   noteForm.reset();
+  const searchInput = document.getElementById('note-user-search');
+  if (searchInput) searchInput.value = '';
   currentChecklistItems = [];
   
   document.querySelectorAll('#modal-color-selector .color-dot').forEach(dot => dot.classList.remove('selected'));
@@ -1038,12 +1028,21 @@ function openNoteModal(note = null, isPrivate = false) {
     document.getElementById('note-title-input').value = note.title;
     
     const assignedContainer = document.getElementById('note-assigned-input');
-    assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
+    let visibleCount = 0;
+    assignedContainer.querySelectorAll('.user-badge').forEach((badge, idx) => {
       const uid = badge.getAttribute('data-uid');
       if (Array.isArray(note.assignedTo) ? note.assignedTo.includes(uid) : uid === note.assignedTo) {
         badge.classList.add('selected');
       } else {
         badge.classList.remove('selected');
+      }
+      
+      // Make sure selected or first 3 are visible
+      if (badge.classList.contains('selected') || visibleCount < 3) {
+        badge.style.display = 'flex';
+        if (!badge.classList.contains('selected')) visibleCount++;
+      } else {
+        badge.style.display = 'none';
       }
     });
 
@@ -1077,12 +1076,22 @@ function openNoteModal(note = null, isPrivate = false) {
     document.getElementById('note-comments-input').value = '';
     
     const assignedContainer = document.getElementById('note-assigned-input');
+    let visibleCount = 0;
     assignedContainer.querySelectorAll('.user-badge').forEach(badge => badge.classList.remove('selected'));
     if (state.currentUser) {
       assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
         if(badge.getAttribute('data-uid') === state.currentUser.id) badge.classList.add('selected');
       });
     }
+    
+    assignedContainer.querySelectorAll('.user-badge').forEach((badge, idx) => {
+      if (badge.classList.contains('selected') || visibleCount < 3) {
+        badge.style.display = 'flex';
+        if (!badge.classList.contains('selected')) visibleCount++;
+      } else {
+        badge.style.display = 'none';
+      }
+    });
   }
 
   // Hide assignment if private note
@@ -1332,10 +1341,12 @@ function populateDropdowns() {
   const assignContainer = document.getElementById('note-assigned-input');
   if (assignContainer) {
     assignContainer.innerHTML = '';
-    state.users.forEach(u => {
+    state.users.forEach((u, index) => {
       const badge = document.createElement('div');
       badge.className = 'user-badge';
       badge.setAttribute('data-uid', u.id);
+      // Solo mostrar los primeros 3 al inicio
+      if (index >= 3) badge.style.display = 'none';
       badge.innerHTML = `
         <div class="user-badge-avatar">${u.name.charAt(0).toUpperCase()}</div>
         <span class="user-badge-name">${u.name}</span>
@@ -1345,6 +1356,35 @@ function populateDropdowns() {
       });
       assignContainer.appendChild(badge);
     });
+    
+    // Add search listener
+    const searchInput = document.getElementById('note-user-search');
+    if (searchInput && !searchInput.hasAttribute('data-bound')) {
+      searchInput.setAttribute('data-bound', 'true');
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const badges = assignContainer.querySelectorAll('.user-badge');
+        let visibleCount = 0;
+        badges.forEach(b => {
+          const name = b.querySelector('.user-badge-name').textContent.toLowerCase();
+          if (query.trim() === '') {
+            // Sin query, vuelve a mostrar los 3 primeros (si no están seleccionados)
+            if (visibleCount < 3 || b.classList.contains('selected')) {
+              b.style.display = 'flex';
+              visibleCount++;
+            } else {
+              b.style.display = 'none';
+            }
+          } else {
+            if (name.includes(query) || b.classList.contains('selected')) {
+              b.style.display = 'flex';
+            } else {
+              b.style.display = 'none';
+            }
+          }
+        });
+      });
+    }
   }
 
   const officeSelect = document.getElementById('note-office-input');

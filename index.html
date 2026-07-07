@@ -276,8 +276,9 @@
   <div class="modal-overlay" id="note-modal">
     <div class="modal-content">
       <div class="modal-header" id="note-modal-title">Crear Nota / Tarea</div>
-      <form id="note-form" style="display: flex; flex-direction: column; gap: 16px;">
+      <form id="note-form" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
         <input type="hidden" id="note-id">
+        <div class="modal-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 4px 8px 16px 8px; margin-bottom: 8px;">
         <div class="input-field">
           <label for="note-title-input">Título</label>
           <input type="text" id="note-title-input" placeholder="Título del pendiente...">
@@ -285,6 +286,7 @@
         
         <div class="input-field" id="note-assign-wrapper">
           <label>Asignar a Colaborador</label>
+          <input type="text" id="note-user-search" placeholder="Buscar colaborador..." style="margin-bottom: 4px; padding: 10px; border-radius: var(--shape-small);">
           <div id="note-assigned-input" class="user-badge-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
             <!-- Dynamically populated -->
           </div>
@@ -337,7 +339,9 @@
           </div>
         </div>
 
-        <div class="modal-actions">
+        </div> <!-- End of modal-body -->
+
+        <div class="modal-actions" style="flex-shrink: 0; padding-top: 8px; border-top: 1px solid var(--md-sys-color-surface-variant);">
           <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
           <button type="button" class="btn btn-text" id="delete-note-btn" style="color: var(--md-sys-color-error); display: none;">Eliminar</button>
           <button type="submit" class="btn btn-primary">Guardar</button>
@@ -366,8 +370,9 @@
   <div class="modal-overlay" id="user-modal">
     <div class="modal-content">
       <div class="modal-header" id="user-modal-title">Agregar Colaborador</div>
-      <form id="user-form" style="display: flex; flex-direction: column; gap: 16px;">
+      <form id="user-form" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
         <input type="hidden" id="user-id">
+        <div class="modal-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 4px 8px 16px 8px; margin-bottom: 8px;">
         <div class="input-field">
           <label for="user-name-input">Nombre Completo</label>
           <input type="text" id="user-name-input" placeholder="Ej. Mariano Sanchez" required>
@@ -384,7 +389,8 @@
             <option value="boss">Administrador</option>
           </select>
         </div>
-        <div class="modal-actions" style="justify-content: space-between; width: 100%;">
+        </div> <!-- End of modal-body -->
+        <div class="modal-actions" style="justify-content: space-between; width: 100%; flex-shrink: 0; padding-top: 8px; border-top: 1px solid var(--md-sys-color-surface-variant);">
           <button type="button" class="btn btn-text" id="delete-user-btn" style="color: var(--md-sys-color-error); display: none;">Eliminar</button>
           <div style="display: flex; gap: 8px;">
             <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
@@ -399,8 +405,9 @@
   <div class="modal-overlay" id="event-modal">
     <div class="modal-content">
       <div class="modal-header" id="event-modal-title">Nueva Cita</div>
-      <form id="event-form" style="display: flex; flex-direction: column; gap: 16px;">
+      <form id="event-form" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
         <input type="hidden" id="event-id">
+        <div class="modal-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 4px 8px 16px 8px; margin-bottom: 8px;">
         <div class="input-field">
           <label for="event-title-input">Título de la Cita</label>
           <input type="text" id="event-title-input" placeholder="Ej. Revisión de Documento" required>
@@ -424,7 +431,8 @@
           <label for="event-desc-input">Detalles / Notas de la Cita</label>
           <textarea id="event-desc-input" rows="2" placeholder="Notas sobre el cliente o documentos requeridos..."></textarea>
         </div>
-        <div class="modal-actions">
+        </div> <!-- End of modal-body -->
+        <div class="modal-actions" style="flex-shrink: 0; padding-top: 8px; border-top: 1px solid var(--md-sys-color-surface-variant);">
           <button type="button" class="btn btn-text modal-close-btn">Cancelar</button>
           <button type="button" class="btn btn-text" id="delete-event-btn" style="color: var(--md-sys-color-error); display: none;">Eliminar</button>
           <button type="submit" class="btn btn-primary">Guardar</button>
