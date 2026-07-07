@@ -359,6 +359,7 @@ function performLogin(user) {
   
   const navAdmin = document.getElementById('nav-admin-btn');
   const barAdmin = document.getElementById('bar-switch-admin');
+  const navPrivate = document.getElementById('nav-private-btn');
   const barPrivate = document.getElementById('bar-switch-private');
   const sdPrivate = document.getElementById('sd-private');
   const sdTask = document.getElementById('sd-task');
@@ -376,9 +377,11 @@ function performLogin(user) {
   }
 
   if (isPrivileged) {
+    if (navPrivate) navPrivate.style.display = 'flex';
     if (barPrivate) barPrivate.style.display = 'flex';
     if (sdPrivate) sdPrivate.style.display = 'flex';
   } else {
+    if (navPrivate) navPrivate.style.display = 'none';
     if (barPrivate) barPrivate.style.display = 'none';
     if (sdPrivate) sdPrivate.style.display = 'none';
   }
@@ -1298,7 +1301,6 @@ noteForm.addEventListener('submit', (e) => {
   const assignedTo = currentNoteIsPrivate ? [state.currentUser.id] : Array.from(assignedContainer.querySelectorAll('.user-badge.selected')).map(b => b.getAttribute('data-uid'));
   const office = document.getElementById('note-office-input').value;
   const noteDate = document.getElementById('note-date-input').value;
-  const addCalendar = document.getElementById('note-add-calendar').checked;
   const addCalendar = document.getElementById('note-add-calendar').checked;
   
   const customColorInput = document.getElementById('note-custom-color');
