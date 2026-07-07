@@ -690,20 +690,25 @@ body {
 .modal-content {
   background-color: var(--md-sys-color-surface);
   border-radius: var(--shape-large);
-  padding: 32px;
-  width: 650px;
+  padding: 24px;
+  width: 550px;
   max-width: 90%;
   box-shadow: var(--elevation-3);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   border: 1px solid var(--md-sys-color-surface-variant);
 }
 
 .modal-header {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--md-sys-color-on-surface);
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
 }
 
 .input-field {
@@ -722,7 +727,7 @@ body {
   background-color: var(--md-sys-color-surface-variant);
   border: 1px solid transparent;
   color: var(--md-sys-color-on-surface);
-  padding: 14px;
+  padding: 10px 12px;
   border-radius: var(--shape-medium);
   font-size: 15px;
   outline: none;
@@ -739,7 +744,7 @@ body {
 }
 
 .btn {
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: var(--shape-full);
   font-weight: 600;
   font-size: 14px;
@@ -950,7 +955,7 @@ body {
     grid-template-columns: 1fr;
   }
   .modal-content {
-    padding: 20px;
+    padding: 16px;
     width: 95%;
   }
   .login-card {
@@ -1088,6 +1093,7 @@ body {
   
  
 .modal-content {
+  max-height: 90vh;
   max-height: 90dvh;
   min-height: 0;
 }
