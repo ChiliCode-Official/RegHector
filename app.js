@@ -1147,22 +1147,14 @@ function openNoteModal(note = null, isPrivate = false) {
     document.getElementById('note-title-input').value = note.title;
     
     const assignedContainer = document.getElementById('note-assigned-input');
-    let visibleCount = 0;
-    assignedContainer.querySelectorAll('.user-badge').forEach((badge, idx) => {
+    assignedContainer.querySelectorAll('.user-badge').forEach((badge) => {
       const uid = badge.getAttribute('data-uid');
       if (Array.isArray(note.assignedTo) ? note.assignedTo.includes(uid) : uid === note.assignedTo) {
         badge.classList.add('selected');
       } else {
         badge.classList.remove('selected');
       }
-      
-      // Make sure selected or first 3 are visible
-      if (badge.classList.contains('selected') || visibleCount < 3) {
-        badge.style.display = 'flex';
-        if (!badge.classList.contains('selected')) visibleCount++;
-      } else {
-        badge.style.display = 'none';
-      }
+      badge.style.display = 'flex';
     });
 
     document.getElementById('note-office-input').value = note.office || '';
@@ -1202,21 +1194,12 @@ function openNoteModal(note = null, isPrivate = false) {
     renderCommentsList();
     
     const assignedContainer = document.getElementById('note-assigned-input');
-    let visibleCount = 0;
-    assignedContainer.querySelectorAll('.user-badge').forEach(badge => badge.classList.remove('selected'));
-    if (state.currentUser) {
-      assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
-        if(badge.getAttribute('data-uid') === state.currentUser.id) badge.classList.add('selected');
-      });
-    }
-    
-    assignedContainer.querySelectorAll('.user-badge').forEach((badge, idx) => {
-      if (badge.classList.contains('selected') || visibleCount < 3) {
-        badge.style.display = 'flex';
-        if (!badge.classList.contains('selected')) visibleCount++;
-      } else {
-        badge.style.display = 'none';
+    assignedContainer.querySelectorAll('.user-badge').forEach(badge => {
+      badge.classList.remove('selected');
+      if (state.currentUser && badge.getAttribute('data-uid') === state.currentUser.id) {
+        badge.classList.add('selected');
       }
+      badge.style.display = 'flex';
     });
   }
 
@@ -1554,15 +1537,24 @@ function populateDropdowns() {
   const assignContainer = document.getElementById('note-assigned-input');
   if (assignContainer) {
     assignContainer.innerHTML = '';
-    state.users.forEach((u, index) => {
+    
+    // Beautiful pastel color palette for avatars
+    const avatarColors = [
+      '#ef5350', '#ec407a', '#ab47bc', '#7e57c2', 
+      '#5c6bc0', '#29b6f6', '#26a69a', '#66bb6a', 
+      '#ffca28', '#ffa726', '#8d6e63'
+    ];
+
+    state.users.forEach((u) => {
+      const charCodeSum = u.name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      const avatarColor = avatarColors[charCodeSum % avatarColors.length];
+
       const badge = document.createElement('div');
       badge.className = 'user-badge';
       badge.setAttribute('data-uid', u.id);
-      // Solo mostrar los primeros 3 al inicio
-      if (index >= 3) badge.style.display = 'none';
       badge.innerHTML = `
-        <div class="user-badge-avatar">${u.name.charAt(0).toUpperCase()}</div>
-        <span class="user-badge-name">${u.name}</span>
+        <div class="user-badge-avatar" style="background-color: ${avatarColor}; color: #fff;">${u.name.charAt(0).toUpperCase()}</div>
+        <span class="user-badge-name" style="font-size: 13px; font-weight: 600;">${u.name}</span>
       `;
       badge.addEventListener('click', () => {
         badge.classList.toggle('selected');
@@ -1570,26 +1562,21 @@ function populateDropdowns() {
       assignContainer.appendChild(badge);
     });
     
-    // Add search listener
+    // Re-bind the search input listener to avoid stale closure references
     const searchInput = document.getElementById('note-user-search');
-    if (searchInput && !searchInput.hasAttribute('data-bound')) {
-      searchInput.setAttribute('data-bound', 'true');
-      searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
+    if (searchInput) {
+      const newSearchInput = searchInput.cloneNode(true);
+      searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+      
+      newSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
         const badges = assignContainer.querySelectorAll('.user-badge');
-        let visibleCount = 0;
         badges.forEach(b => {
           const name = b.querySelector('.user-badge-name').textContent.toLowerCase();
-          if (query.trim() === '') {
-            // Sin query, vuelve a mostrar los 3 primeros (si no están seleccionados)
-            if (visibleCount < 3 || b.classList.contains('selected')) {
-              b.style.display = 'flex';
-              visibleCount++;
-            } else {
-              b.style.display = 'none';
-            }
+          if (query === '') {
+            b.style.display = 'flex';
           } else {
-            if (name.includes(query) || b.classList.contains('selected')) {
+            if (name.includes(query)) {
               b.style.display = 'flex';
             } else {
               b.style.display = 'none';
@@ -1599,6 +1586,7 @@ function populateDropdowns() {
       });
     }
   }
+}
 
   const officeSelect = document.getElementById('note-office-input');
   if (officeSelect) {
