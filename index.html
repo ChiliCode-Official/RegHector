@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Scriptura - Gestión Notarial</title>
-  <meta name="description" content="Scriptura es la plataforma integral de gestión de tareas, registro de escrituras y colaboración para la Notaría Pública.">
-  <meta name="theme-color" content="#1f1b16">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Scriptura</title>
+  <meta name="description" content="Scriptura es la plataforma integral de gestión de tareas y colaboración.">
+  <meta name="theme-color" content="#111318">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="index.css">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="Scriptura - Gestión Notarial">
-  <meta property="og:description" content="Plataforma de gestión y colaboración para la Notaría Pública.">
+  <meta property="og:title" content="Scriptura">
+  <meta property="og:description" content="Plataforma de gestión de tareas y pendientes.">
   <meta property="og:image" content="icon-512.png">
   <meta property="og:type" content="website">
 </head>
@@ -29,7 +29,7 @@
           <img src="icon-192.png" alt="Scriptura Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
         </div>
         <span class="login-title">Scriptura</span>
-        <p style="font-size: 13px; opacity: 0.7; text-align: center; color: #8c8a82;">Hector Tasks - Administración del Equipo</p>
+        <p style="font-size: 13px; opacity: 0.7; text-align: center; color: #8c8a82;">Administración del Equipo</p>
       </div>
 
       <form id="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
@@ -43,8 +43,8 @@
         </div>
 
         <div class="input-field" id="login-password-container" style="display: none;">
-          <label for="login-pwd-input">Contraseña de Acceso</label>
-          <input type="password" id="login-pwd-input" placeholder="Contraseña...">
+          <label for="boss-password-input">Contraseña de Administrador</label>
+          <input type="password" id="login-pwd-input" placeholder="Ingrese su clave">
         </div>
         <div id="login-error-msg" style="color: var(--md-sys-color-error); font-size: 13px; font-weight: 500; display: none;"></div>
         <button type="submit" class="btn btn-primary" id="login-submit-btn" style="width: 100%;">Ingresar</button>
@@ -82,7 +82,7 @@
           <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
         </li>
         <li class="nav-item" data-target="keep-screen" title="Notas y Tareas">
-          <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5 5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg>
         </li>
         <li class="nav-item" data-target="calendar-screen" title="Calendario">
           <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
@@ -105,7 +105,7 @@
       <!-- Top Title and Metrics Bar -->
       <header class="top-bar">
         <div class="top-bar-left">
-          <span class="sub-title">Hector Tasks</span>
+          <span class="sub-title">Scriptura</span>
           <h1 class="main-title" id="dashboard-title-text">Operación Diaria</h1>
         </div>
         
@@ -196,7 +196,7 @@
       <!-- Screen 3: Equipo y Personal (Admin Screen) -->
       <section id="admin-screen" class="screen">
         <div class="screen-header" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
-          <h2 style="font-weight:700;">Equipo, Personal y Familia</h2>
+          <h2 style="font-weight:700;">Equipo y Personal</h2>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button class="btn btn-text" id="theme-toggle" title="Cambiar Tema Oscuro/Claro" style="padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: var(--md-sys-color-surface-variant); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
@@ -224,11 +224,11 @@
         <div>
           <!-- Offices management -->
           <div class="admin-card" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; max-width: 600px;">
-            <h3 style="font-weight: 700; font-size: 16px;">Notarías y Ámbitos</h3>
-            <p style="font-size: 13px; opacity: 0.7; line-height: 1.4;">Agrega o elimina etiquetas personalizadas de las notarías o categorías de tus pendientes.</p>
-            
-            <form id="add-office-form" style="display: flex; gap: 8px;">
-              <input type="text" id="new-office-input" placeholder="Nueva Notaría / Etiqueta..." required style="flex:1; padding: 8px 12px; border-radius: var(--shape-small); border: 1px solid var(--md-sys-color-outline);">
+            <div class="input-field" style="margin-top: 16px;">
+            <h3 style="font-weight: 700; font-size: 16px;">Áreas y Etiquetas</h3>
+            <p style="font-size: 13px; opacity: 0.7; line-height: 1.4;">Agrega o elimina etiquetas personalizadas de las áreas o categorías de tus pendientes.</p>
+            <form id="add-office-form" style="display: flex; gap: 8px; margin-top: 8px;">
+              <input type="text" id="new-office-input" placeholder="Nueva Etiqueta..." required style="flex:1; padding: 8px 12px; border-radius: var(--shape-small); border: 1px solid var(--md-sys-color-outline);">
               <button type="submit" class="btn btn-primary">Agregar</button>
             </form>
 
@@ -244,7 +244,7 @@
     <div id="speed-dial-menu" style="display: flex; position: fixed; bottom: 84px; left: 50%; z-index: 1001; background-color: var(--md-sys-color-surface); border-radius: var(--shape-medium); box-shadow: var(--elevation-3); padding: 8px; flex-direction: column; gap: 4px; border: 1px solid var(--md-sys-color-outline);">
       <button type="button" class="btn btn-text speed-dial-item" id="sd-private" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg> Mi Pendiente</button>
       <button type="button" class="btn btn-text speed-dial-item" id="sd-task" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-1.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.06-2.15 3.9z"/></svg> Nueva Tarea</button>
-      <button type="button" class="btn btn-text speed-dial-item" id="sd-event" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg> Nueva Cita / Firma</button>
+      <button type="button" class="btn btn-text speed-dial-item" id="sd-event" style="width: 100%; text-align: left; padding: 10px 16px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; color:var(--md-sys-color-on-surface);"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg> Nueva Cita</button>
     </div>
 
     <!-- Floating Action Bar Bottom Center (as seen in the mockup) -->
@@ -291,7 +291,7 @@
         </div>
 
         <div class="input-field">
-          <label for="note-office-input">Oficina / Ámbito</label>
+          <label for="note-office-input">Área / Categoría</label>
           <select id="note-office-input">
             <!-- Dynamically populated from state.offices -->
           </select>
@@ -316,9 +316,9 @@
           <button type="button" class="btn btn-text" id="add-checklist-item-btn" style="align-self: flex-start; padding: 4px 8px; font-size: 13px;">+ Añadir elemento</button>
         </div>
 
-        <div class="input-field" id="note-comments-container">
+        <div class="input-field" style="margin-top: 8px;">
           <label for="note-comments-input">Sugerencias / Comentarios (Solo Personal)</label>
-          <textarea id="note-comments-input" rows="2" placeholder="Agrega una nota, comentario o recordatorio para el jefe..." disabled></textarea>
+          <textarea id="note-comments-input" rows="2" placeholder="Agrega una nota, comentario o recordatorio para el Administrador..." disabled></textarea>
         </div>
 
         <div class="input-field">
@@ -347,7 +347,7 @@
     <div class="modal-content" style="width: 360px;">
       <div class="modal-header">Acceso de Administrador</div>
       <div class="input-field">
-        <label for="boss-password-input">Contraseña de Jefe</label>
+        <label for="boss-password-input">Contraseña de Administrador</label>
         <input type="password" id="boss-password-input" placeholder="Ingrese contraseña..." required>
         <span id="password-error" style="color: var(--md-sys-color-error); font-size: 12px; display: none;">Contraseña incorrecta</span>
       </div>
@@ -394,12 +394,12 @@
   <!-- Modal 5: Agregar/Editar Evento de Calendario -->
   <div class="modal-overlay" id="event-modal">
     <div class="modal-content">
-      <div class="modal-header" id="event-modal-title">Nueva Cita / Firma</div>
+      <div class="modal-header" id="event-modal-title">Nueva Cita</div>
       <form id="event-form" style="display: flex; flex-direction: column; gap: 16px;">
         <input type="hidden" id="event-id">
         <div class="input-field">
-          <label for="event-title-input">Asunto / Título</label>
-          <input type="text" id="event-title-input" placeholder="Ej. Firma de Escritura" required>
+          <label for="event-title-input">Título de la Cita</label>
+          <input type="text" id="event-title-input" placeholder="Ej. Revisión de Documento" required>
         </div>
         <div class="input-field">
           <label for="event-date-input">Fecha</label>

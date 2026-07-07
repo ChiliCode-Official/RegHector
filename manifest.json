@@ -1,11 +1,11 @@
 {
-  "name": "Scriptura - Registro de Escrituras",
+  "name": "Scriptura",
   "short_name": "Scriptura",
-  "description": "Gestor de escrituras y tareas para notarias con diseño Material You.",
+  "description": "Gestor de tareas y pendientes para tu equipo.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1f1b16",
-  "theme_color": "#ffb825",
+  "background_color": "#111318",
+  "theme_color": "#111318",
   "orientation": "any",
   "icons": [
     {

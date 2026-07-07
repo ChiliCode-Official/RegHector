@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scriptura-v13';
+const CACHE_NAME = 'hector-tasks-v16';
 const ASSETS = [
   './',
   './index.html',

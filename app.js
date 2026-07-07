@@ -37,7 +37,7 @@ let state = {
   notes: [],
   privateNotes: [],
   events: [], 
-  offices: ['Notaría 134', 'Notaría 160', 'Personal'], 
+  offices: ['General', 'Urgente', 'Personal'], 
   theme: 'light',
   currentFilter: 'all', 
   calendarDate: new Date(), 
@@ -60,7 +60,7 @@ function loadData() {
   state.privateNotes = lPrivateNotes ? JSON.parse(lPrivateNotes) : [];
   state.notes = lNotes ? JSON.parse(lNotes) : [];
   state.events = lEvents ? JSON.parse(lEvents) : [];
-  state.offices = lOffices ? JSON.parse(lOffices) : ['Notaría 134', 'Notaría 160', 'Personal'];
+  state.offices = lOffices ? JSON.parse(lOffices) : ['General', 'Urgente', 'Personal'];
   state.theme = lTheme || 'light';
 
   renderUsersTable();
@@ -164,7 +164,7 @@ function loadData() {
     // 5. Listen to Offices tags
     db.collection('config').doc('offices').onSnapshot(doc => {
       if (doc.exists) {
-        state.offices = doc.data().list || ['Notaría 134', 'Notaría 160', 'Personal'];
+        state.offices = doc.data().list || ['General', 'Urgente', 'Personal'];
         localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
         renderOfficeTags();
         populateDropdowns();
@@ -327,7 +327,7 @@ function renderLoginUsers() {
       }
       
       const isBoss = user.roles && user.roles.includes('boss');
-      const roleName = isBoss ? 'Notario Público / Jefe' : (user.roles && user.roles.includes('personal') ? 'Personal' : 'Colaborador');
+      const roleName = isBoss ? 'Administrador' : (user.roles && user.roles.includes('personal') ? 'Personal' : 'Colaborador');
       
       btn.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:flex-start;">
@@ -498,7 +498,7 @@ function switchScreen(screenId) {
   } else if (screenId === 'keep-screen') {
     headerTitle.textContent = 'Tareas y Pendientes';
   } else if (screenId === 'calendar-screen') {
-    headerTitle.textContent = 'Calendario Notarial';
+    headerTitle.textContent = 'Calendario de Actividades';
   } else if (screenId === 'admin-screen') {
     headerTitle.textContent = 'Personal, Equipo y Oficinas';
   }
@@ -811,7 +811,7 @@ function renderUsersTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${u.name}</strong></td>
-      <td>${u.roles && u.roles.includes('boss') ? 'Jefe / Notario' : (u.roles || []).join(', ')}</td>
+      <td>${u.roles && u.roles.includes('boss') ? 'Administrador' : (u.roles || []).join(', ')}</td>
       <td><code>${u.password || 'Sin Clave'}</code></td>
       <td>
         <button class="btn btn-text" onclick="openUserModal('${u.id}')" style="padding: 6px 12px; font-size: 13px;">Editar</button>
