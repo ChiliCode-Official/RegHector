@@ -1024,6 +1024,7 @@ if (addOfficeForm) {
 
 // Modal Form handling
 let currentChecklistItems = [];
+let currentCommentsList = [];
 
 let currentNoteIsPrivate = false;
 
@@ -1083,13 +1084,20 @@ function openNoteModal(note = null, isPrivate = false) {
       }
     });
 
-    document.getElementById('note-comments-input').value = note.comments || '';
+    if (note.commentsList) {
+      currentCommentsList = [...note.commentsList];
+    } else if (note.comments) {
+      currentCommentsList = [{ text: note.comments, authorName: 'Sistema', role: 'system', timestamp: Date.now() }];
+    }
+    renderCommentsList();
     document.getElementById('delete-note-btn').style.display = 'block';
   } else {
     document.getElementById('note-id').value = '';
     document.getElementById('note-date-input').value = '';
+    document.getElementById('note-date-input').value = '';
     document.getElementById('note-add-calendar').checked = false;
-    document.getElementById('note-comments-input').value = '';
+    currentCommentsList = [];
+    renderCommentsList();
     
     const assignedContainer = document.getElementById('note-assigned-input');
     let visibleCount = 0;
@@ -1121,14 +1129,68 @@ function openNoteModal(note = null, isPrivate = false) {
   const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
   
   if (isPersonal || isBoss) {
-    document.getElementById('note-comments-input').removeAttribute('disabled');
+    document.getElementById('note-comment-new-container').style.display = 'flex';
   } else {
-    document.getElementById('note-comments-input').setAttribute('disabled', 'true');
+    document.getElementById('note-comment-new-container').style.display = 'none';
   }
 
   renderModalChecklist();
   noteModal.classList.add('active');
 }
+
+function renderCommentsList() {
+  const container = document.getElementById('note-comments-list');
+  container.innerHTML = '';
+  if (currentCommentsList.length === 0) {
+    container.innerHTML = '<span style="opacity:0.5; font-size:13px; text-align:center;">No hay sugerencias aún...</span>';
+    return;
+  }
+  
+  currentCommentsList.forEach(c => {
+    const bubble = document.createElement('div');
+    const isBoss = c.role === 'boss';
+    bubble.style.padding = '8px 12px';
+    bubble.style.borderRadius = 'var(--shape-medium)';
+    bubble.style.marginBottom = '4px';
+    bubble.style.fontSize = '13px';
+    
+    if (isBoss) {
+      bubble.style.backgroundColor = 'var(--md-sys-color-primary)';
+      bubble.style.color = 'var(--md-sys-color-on-primary)';
+      bubble.style.alignSelf = 'flex-end';
+      bubble.style.borderBottomRightRadius = '4px';
+    } else {
+      bubble.style.backgroundColor = 'var(--md-sys-color-secondary-container)';
+      bubble.style.color = 'var(--md-sys-color-on-secondary-container)';
+      bubble.style.alignSelf = 'flex-start';
+      bubble.style.borderBottomLeftRadius = '4px';
+    }
+    
+    const timeStr = new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    bubble.innerHTML = `
+      <div style="font-weight:700; font-size:11px; margin-bottom:2px; opacity:0.8;">${c.authorName} • ${timeStr}</div>
+      <div>${c.text}</div>
+    `;
+    container.appendChild(bubble);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+document.getElementById('note-comment-add-btn').addEventListener('click', () => {
+  const input = document.getElementById('note-comment-new-input');
+  const text = input.value.trim();
+  if (text) {
+    const role = state.currentUser.roles.includes('boss') ? 'boss' : 'personal';
+    currentCommentsList.push({
+      text: text,
+      authorName: state.currentUser.name,
+      role: role,
+      timestamp: Date.now()
+    });
+    input.value = '';
+    renderCommentsList();
+  }
+});
 
 function openUserModal(userId = null) {
   userForm.reset();
@@ -1237,7 +1299,7 @@ noteForm.addEventListener('submit', (e) => {
   const office = document.getElementById('note-office-input').value;
   const noteDate = document.getElementById('note-date-input').value;
   const addCalendar = document.getElementById('note-add-calendar').checked;
-  const comments = document.getElementById('note-comments-input').value;
+  const addCalendar = document.getElementById('note-add-calendar').checked;
   
   const customColorInput = document.getElementById('note-custom-color');
   const customColorDot = document.querySelector('.custom-color-dot');
@@ -1270,10 +1332,10 @@ noteForm.addEventListener('submit', (e) => {
 
   const isNew = !matchedNote;
   const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
-  let data = { id, title, assignedTo, office, color, checklist, date, comments };
+  let data = { id, title, assignedTo, office, color, checklist, date, commentsList: currentCommentsList };
   
   if (!isBoss && matchedNote) {
-    data = { ...matchedNote, comments: comments }; // Solo permite comentar a staff
+    data = { ...matchedNote, commentsList: currentCommentsList }; // Solo permite agregar comentarios a staff
   }
 
   if (currentNoteIsPrivate) {
@@ -1290,7 +1352,7 @@ noteForm.addEventListener('submit', (e) => {
       title: title || 'Tarea: ' + checklist[0]?.text, 
       date: noteDate, 
       time: '', 
-      desc: comments,
+      desc: currentCommentsList.map(c => c.text).join('\\n'),
       isPrivate: currentNoteIsPrivate 
     };
     syncSave('events', eventId, eventData);

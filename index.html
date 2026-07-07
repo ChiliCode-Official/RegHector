@@ -319,8 +319,14 @@
         </div>
 
         <div class="input-field" style="margin-top: 8px;">
-          <label for="note-comments-input">Sugerencias / Comentarios (Solo Personal)</label>
-          <textarea id="note-comments-input" rows="2" placeholder="Agrega una nota, comentario o recordatorio para el Administrador..." disabled></textarea>
+          <label>Sugerencias / Comentarios</label>
+          <div id="note-comments-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding: 8px; background: var(--md-sys-color-surface-variant); border-radius: var(--shape-medium);">
+            <!-- Dynamic comment bubbles -->
+          </div>
+          <div id="note-comment-new-container" style="display: flex; gap: 8px; margin-top: 4px; display: none;">
+            <input type="text" id="note-comment-new-input" placeholder="Escribe un comentario..." style="flex: 1; padding: 10px; border-radius: var(--shape-small); border: 1px solid var(--md-sys-color-outline);">
+            <button type="button" class="btn btn-primary" id="note-comment-add-btn" style="padding: 10px 16px;">Añadir</button>
+          </div>
         </div>
 
         <div class="input-field">
