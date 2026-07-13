@@ -142,6 +142,10 @@
         </button>
         
         <div style="flex:1;"></div>
+        <div class="search-box-container" style="position: relative; display: flex; align-items: center; max-width: 280px; width: 100%;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--md-sys-color-outline)" style="position: absolute; left: 12px; pointer-events: none;"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input type="text" id="global-search-input" placeholder="Buscar pendientes..." style="width: 100%; padding: 8px 12px 8px 36px; border-radius: var(--shape-full); border: 1px solid var(--md-sys-color-outline); background-color: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); outline: none; font-size: 13px; font-weight: 500; transition: border-color var(--transition-fast);">
+        </div>
       </div>
 
       <div class="header-divider"></div>
@@ -211,6 +215,7 @@
               <tr>
                 <th>Nombre</th>
                 <th>Rol / Tipo</th>
+                <th>Contacto (Email / Tel)</th>
                 <th>Contraseña / Código</th>
                 <th>Acciones</th>
               </tr>
@@ -296,6 +301,15 @@
           <label for="note-office-input">Área / Categoría</label>
           <select id="note-office-input">
             <!-- Dynamically populated from state.offices -->
+          </select>
+        </div>
+
+        <div class="input-field">
+          <label for="note-priority-input">Prioridad</label>
+          <select id="note-priority-input" style="padding: 10px; border-radius: var(--shape-small); font-weight: 500;">
+            <option value="low">Baja</option>
+            <option value="medium">Media</option>
+            <option value="high">Alta</option>
           </select>
         </div>
 
@@ -407,6 +421,14 @@
         <div class="input-field">
           <label for="user-password-input">Contraseña / Código de Acceso</label>
           <input type="text" id="user-password-input" placeholder="Contraseña visible para asignarle" required>
+        </div>
+        <div class="input-field">
+          <label for="user-email-input">Correo Electrónico (Notificaciones)</label>
+          <input type="email" id="user-email-input" placeholder="ejemplo@correo.com">
+        </div>
+        <div class="input-field">
+          <label for="user-phone-input">Teléfono / WhatsApp (ej. 521XXXXXXXXXX)</label>
+          <input type="text" id="user-phone-input" placeholder="Código de país + número, ej: 5215512345678">
         </div>
         <div class="input-field">
           <label for="user-role-input">Rol / Tipo de Integrante (Puedes seleccionar varios)</label>

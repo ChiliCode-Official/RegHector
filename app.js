@@ -12,6 +12,14 @@ const firebaseConfig = {
 // Webhook Configuration for Make
 const WEBHOOK_URL = "https://hook.us2.make.com/qcfugoge9ei0foesqowebsohf9jlzmcg";
 
+// EmailJS Configuration (Free background emails)
+const EMAILJS_CONFIG = {
+  serviceId: "service_ktf1gtr",     // Actualizado con el ID de tu captura
+  templateId: "template_1ue91mn",   // ID de tu plantilla provista
+  publicKey: "wVYfLABXRbFd3u0tD",   // Tu Public Key provista
+  privateKey: "yT9eSMreDG1rehFWjgOFx" // Guardado por referencia
+};
+
 // Check if Firebase is loaded and initialized
 let db = null;
 let useFirebase = false;
@@ -247,41 +255,142 @@ function syncDelete(collection, docId) {
   }
 }
 
-// Trigger Make Webhook notification
+// Trigger Make Webhook and EmailJS notifications
 function triggerNotification(note, isNew = true) {
-  if (!WEBHOOK_URL || WEBHOOK_URL.includes("YOUR_MAKE")) return;
+  const assignedUsers = Array.isArray(note.assignedTo) 
+    ? note.assignedTo.map(id => state.users.find(u => u.id === id)).filter(Boolean)
+    : [state.users.find(u => u.id === note.assignedTo)].filter(Boolean);
 
-  const assignedUser = state.users.find(u => u.id === note.assignedTo);
-  const checklistStr = note.checklist ? note.checklist.map(item => `- [${item.done ? 'x' : ' '}] ${item.text}`).join('\n') : '';
-
-  const payload = {
-    event: isNew ? 'task_assigned' : 'task_updated',
-    task_id: note.id,
-    title: note.title,
-    assigned_name: assignedUser ? assignedUser.name : 'Sin Asignar',
-    deed_number: 'N/A',
-    deed_title: 'N/A',
-    office: note.office || 'General',
-    date: note.date,
-    checklist: checklistStr,
-    editor: state.currentUser ? state.currentUser.name : 'Sistema'
-  };
+  const mainAssigned = assignedUsers[0];
 
   // PWA Local Notification (Free)
-  if ('Notification' in window && Notification.permission === 'granted' && state.currentUser && state.currentUser.id !== assignedUser?.id) {
+  if ('Notification' in window && Notification.permission === 'granted' && state.currentUser && (!mainAssigned || state.currentUser.id !== mainAssigned.id)) {
     new Notification(isNew ? 'Nueva Tarea Asignada' : 'Tarea Actualizada', {
-      body: `${note.title} - ${assignedUser ? assignedUser.name : ''}`,
+      body: `${note.title} - ${mainAssigned ? mainAssigned.name : ''}`,
       icon: 'icon-192.png'
     });
   }
 
-  fetch(WEBHOOK_URL, {
+  // Trigger EmailJS Notification (Free Email)
+  sendEmailJSNotification(note, isNew);
+
+  // Trigger Make Webhook (Optional/Legacy)
+  if (WEBHOOK_URL && !WEBHOOK_URL.includes("YOUR_MAKE")) {
+    const checklistStr = note.checklist ? note.checklist.map(item => `- [${item.done ? 'x' : ' '}] ${item.text}`).join('\n') : '';
+    const payload = {
+      event: isNew ? 'task_assigned' : 'task_updated',
+      task_id: note.id,
+      title: note.title,
+      assigned_name: mainAssigned ? mainAssigned.name : 'Sin Asignar',
+      deed_number: 'N/A',
+      deed_title: 'N/A',
+      office: note.office || 'General',
+      date: note.date,
+      checklist: checklistStr,
+      editor: state.currentUser ? state.currentUser.name : 'Sistema'
+    };
+
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => console.log('Notification webhook triggered successfully'))
+    .catch(err => console.error('Error triggering notification webhook:', err));
+  }
+}
+
+// Send Email Notification via EmailJS REST API
+function sendEmailJSNotification(note, isNew = true) {
+  if (!EMAILJS_CONFIG.serviceId || EMAILJS_CONFIG.serviceId.includes("YOUR_SERVICE")) return;
+
+  const assignedUsers = Array.isArray(note.assignedTo) 
+    ? note.assignedTo.map(id => state.users.find(u => u.id === id)).filter(Boolean)
+    : [state.users.find(u => u.id === note.assignedTo)].filter(Boolean);
+
+  assignedUsers.forEach(user => {
+    if (!user.email) return;
+
+    // A Héctor no le llegan correos a menos que un tercero (ej. personal) le asigne la tarea
+    const isHector = user.id === 'boss' || (user.roles && user.roles.includes('boss'));
+    const isHectorEditing = state.currentUser && (state.currentUser.id === 'boss' || (state.currentUser.roles && state.currentUser.roles.includes('boss')));
+    if (isHector && isHectorEditing) {
+      return; // Ignorar el correo si el propio Héctor realiza el cambio
+    }
+
+    const checklistStr = note.checklist && note.checklist.length > 0
+      ? note.checklist.map(item => `${item.done ? '✓' : '✗'} ${item.text}`).join('\n')
+      : 'Sin checklist';
+      
+    const priorityLabel = note.priority === 'high' ? 'Alta 🔴' : (note.priority === 'medium' ? 'Media 🟡' : 'Baja 🟢');
+
+    const payload = {
+      service_id: EMAILJS_CONFIG.serviceId,
+      template_id: EMAILJS_CONFIG.templateId,
+      user_id: EMAILJS_CONFIG.publicKey,
+      template_params: {
+        to_email: user.email,
+        to_name: user.name,
+        task_title: note.title || 'Sin Título',
+        task_office: note.office || 'General',
+        task_priority: priorityLabel,
+        task_date: note.date || 'Hoy',
+        task_checklist: checklistStr,
+        editor_name: state.currentUser ? state.currentUser.name : 'Sistema',
+        action_type: isNew ? 'asignado una nueva tarea' : 'actualizado un pendiente'
+      }
+    };
+
+    fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => {
+      if (res.ok) console.log(`Email notification sent successfully to ${user.name}`);
+      else console.error(`Failed to send EmailJS notification:`, res.statusText);
+    })
+    .catch(err => console.error('Error sending EmailJS notification:', err));
+  });
+}
+
+// Enviar aviso de Calendario por Correo a Héctor si lo agenda el personal
+function sendCalendarEventEmail(eventData) {
+  const isPersonalUser = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('personal');
+  if (!isPersonalUser) return;
+
+  const hector = state.users.find(u => u.id === 'boss' || (u.roles && u.roles.includes('boss')));
+  if (!hector || !hector.email) return;
+
+  if (!EMAILJS_CONFIG.serviceId || EMAILJS_CONFIG.serviceId.includes("YOUR_SERVICE")) return;
+
+  const payload = {
+    service_id: EMAILJS_CONFIG.serviceId,
+    template_id: EMAILJS_CONFIG.templateId,
+    user_id: EMAILJS_CONFIG.publicKey,
+    template_params: {
+      to_email: hector.email,
+      to_name: hector.name,
+      task_title: `Evento: ${eventData.title}`,
+      task_office: eventData.isPrivate ? 'Privado (Solo Admin)' : 'Público',
+      task_priority: 'Calendario 📅',
+      task_date: `${eventData.date} ${eventData.time || ''}`,
+      task_checklist: eventData.desc || 'Sin descripción',
+      editor_name: state.currentUser.name,
+      action_type: 'creado un nuevo evento en tu calendario'
+    }
+  };
+
+  fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  .then(res => console.log('Notification webhook triggered successfully'))
-  .catch(err => console.error('Error triggering notification webhook:', err));
+  .then(res => {
+    if (res.ok) console.log(`Calendar event email sent successfully to Hector`);
+    else console.error(`Failed to send EmailJS calendar notification to Hector:`, res.statusText);
+  })
+  .catch(err => console.error('Error sending calendar email to Hector:', err));
 }
 
 // DOM Elements
@@ -290,7 +399,7 @@ const appContainer = document.getElementById('app-container');
 const privateContainer = document.getElementById('private-container');
 const notesContainer = document.getElementById('notes-container');
 const usersTableBody = document.getElementById('users-table-body');
-const searchInput = document.getElementById('search-input');
+const searchInput = document.getElementById('global-search-input');
 const themeToggle = document.getElementById('theme-toggle');
 const globalFab = document.getElementById('global-fab');
 const activeUserAvatar = document.getElementById('active-user-avatar');
@@ -687,10 +796,10 @@ function renderPrivateNotes(filterText = '') {
 
   filtered.forEach(note => {
     const card = document.createElement('div');
-    card.className = `keep-card`;
+    card.className = `keep-card priority-${note.priority || 'low'}`;
     if (note.color && note.color.startsWith('#')) {
       card.style.backgroundColor = note.color;
-      card.style.color = '#ffffff'; // Assume dark background for custom colors or just use white text
+      card.style.color = '#ffffff';
     } else {
       card.classList.add(`card-color-${note.color || '1'}`);
     }
@@ -709,17 +818,66 @@ function renderPrivateNotes(filterText = '') {
     });
 
     const progressPercent = checklistArr.length > 0 ? (doneCount / checklistArr.length) * 100 : 0;
+    
+    let progressHtml = '';
+    if (checklistArr.length > 0) {
+      progressHtml = `
+        <div class="card-progress-container" style="margin-top: -4px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; opacity: 0.85;">
+            <span>Progreso</span>
+            <span>${doneCount}/${checklistArr.length} (${Math.round(progressPercent)}%)</span>
+          </div>
+          <div style="width:100%; height:6px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden;">
+            <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease; border-radius:var(--shape-full);"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    const priorityLabel = note.priority === 'high' ? 'Alta' : (note.priority === 'medium' ? 'Media' : 'Baja');
+    const priorityClass = `badge-priority-${note.priority || 'low'}`;
+    const priorityBadge = `<span class="keep-card-priority-badge ${priorityClass}">${priorityLabel}</span>`;
+
+    let dateBadgeHtml = '';
+    if (note.date) {
+      const todayDateStr = new Date().toLocaleDateString('en-CA');
+      const taskDateStr = note.date;
+      
+      let dateBadgeStyle = 'color: var(--md-sys-color-on-surface-variant);';
+      let dateIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>';
+      
+      const isCompleted = checklistArr.length > 0 && checklistArr.every(item => item.done);
+
+      if (!isCompleted) {
+        if (taskDateStr === todayDateStr) {
+          dateBadgeStyle = 'color: #ffa726; font-weight: 700; background-color: rgba(255, 167, 38, 0.12); padding: 2px 6px; border-radius: var(--shape-small);';
+          dateIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="#ffa726" style="vertical-align: middle; margin-right: 4px; animation: pulse 2s infinite;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+        } else if (taskDateStr < todayDateStr) {
+          dateBadgeStyle = 'color: var(--md-sys-color-error); font-weight: 700; background-color: rgba(255, 180, 171, 0.15); padding: 2px 6px; border-radius: var(--shape-small);';
+          dateIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="var(--md-sys-color-error)" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+        }
+      }
+
+      dateBadgeHtml = `
+        <span class="card-footer-date" style="${dateBadgeStyle} display: inline-flex; align-items: center;">
+          ${dateIcon} ${note.date}
+        </span>
+      `;
+    } else {
+      dateBadgeHtml = `<span class="card-footer-date">Hoy</span>`;
+    }
 
     card.innerHTML = `
       <div class="keep-card-header">
-        <span class="keep-card-category">Pendiente Privado</span>
+        <div style="display: flex; align-items: center;">
+          <span class="keep-card-category">Pendiente Privado</span>
+          ${priorityBadge}
+        </div>
         <div class="card-action-dot">···</div>
       </div>
       <div class="keep-card-title">${note.title || '<em>Sin Título</em>'}</div>
       
-      <div style="width:100%; height:4px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden; margin-top:-4px;">
-        <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
-      </div>
+      ${progressHtml}
 
       <ul class="card-checklist">
         ${checklistHtml}
@@ -728,7 +886,7 @@ function renderPrivateNotes(filterText = '') {
       <div class="card-footer">
         <div class="card-footer-info">
           <span class="card-footer-name">Solo Administrador</span>
-          <span class="card-footer-date">${note.date || 'Hoy'}</span>
+          ${dateBadgeHtml}
         </div>
       </div>
     `;
@@ -793,7 +951,7 @@ function renderNotes(filterText = '') {
 
   filtered.forEach(note => {
     const card = document.createElement('div');
-    card.className = `keep-card`;
+    card.className = `keep-card priority-${note.priority || 'low'}`;
     if (note.color && note.color.startsWith('#')) {
       card.style.backgroundColor = note.color;
       card.style.color = '#ffffff';
@@ -820,20 +978,79 @@ function renderNotes(filterText = '') {
 
     const progressPercent = checklistArr.length > 0 ? (doneCount / checklistArr.length) * 100 : 0;
 
+    let progressHtml = '';
+    if (checklistArr.length > 0) {
+      progressHtml = `
+        <div class="card-progress-container" style="margin-top: -4px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; opacity: 0.85;">
+            <span>Progreso</span>
+            <span>${doneCount}/${checklistArr.length} (${Math.round(progressPercent)}%)</span>
+          </div>
+          <div style="width:100%; height:6px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden;">
+            <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease; border-radius:var(--shape-full);"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    const priorityLabel = note.priority === 'high' ? 'Alta' : (note.priority === 'medium' ? 'Media' : 'Baja');
+    const priorityClass = `badge-priority-${note.priority || 'low'}`;
+    const priorityBadge = `<span class="keep-card-priority-badge ${priorityClass}">${priorityLabel}</span>`;
+
     const avatarsHtml = assignedUsers.length > 0 
       ? assignedUsers.map((u, i) => `<div class="assigned-avatar" style="border: 2px solid var(--md-sys-color-surface); margin-left: ${i > 0 ? '-10px' : '0'}; z-index: ${10-i};" title="${u.name}">${u.name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>`).join('')
       : '<div class="assigned-avatar">?</div>';
 
+    const waUser = assignedUsers.find(u => u.phone);
+    let waShareButtonHtml = '';
+    if (waUser) {
+      waShareButtonHtml = `
+        <button class="btn-wa-share" title="Enviar aviso de tarea por WhatsApp a ${waUser.name}" style="background: none; border: none; padding: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #25d366; transition: transform 0.2s;" onclick="shareTaskOnWhatsApp(event, '${note.id}', '${waUser.id}')">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.059-3.486l.332.197c1.7.1 3.57.502 5.09.503 5.485 0 9.948-4.414 9.95-9.848.002-2.634-1.02-5.109-2.879-6.97C16.75 2.535 14.28 1.511 11.65 1.51c-5.487 0-9.953 4.414-9.956 9.848a9.789 9.789 0 0 0 1.523 5.176l.217.346L2.43 20.916l4.285-1.12c.001-.001.001-.001 0 0zM17.848 14.39c-.314-.157-1.86-.92-2.148-1.025-.289-.105-.499-.157-.709.157-.21.314-.813 1.025-.996 1.235-.183.21-.366.236-.68.079-1.353-.679-2.222-1.258-3.08-2.733-.183-.314-.183-.509-.026-.666.141-.141.314-.366.471-.549.157-.183.21-.314.314-.523.105-.21.052-.393-.026-.549-.079-.157-.709-1.71-.971-2.338-.255-.615-.515-.532-.709-.542-.183-.01-.393-.01-.603-.01-.21 0-.55.079-.838.393-.289.314-1.102 1.077-1.102 2.626 0 1.549 1.127 3.045 1.284 3.255.157.21 2.217 3.398 5.372 4.764.75.325 1.336.52 1.79.664.755.24 1.442.207 1.985.126.607-.09 1.86-.759 2.122-1.464.262-.705.262-1.307.183-1.432-.079-.126-.289-.21-.603-.367z"/></svg>
+        </button>
+      `;
+    }
+
+    let dateBadgeHtml = '';
+    if (note.date) {
+      const todayDateStr = new Date().toLocaleDateString('en-CA');
+      const taskDateStr = note.date;
+      
+      let dateBadgeStyle = 'color: var(--md-sys-color-on-surface-variant);';
+      let dateIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align: middle; margin-right: 4px;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>';
+      
+      const isCompleted = checklistArr.length > 0 && checklistArr.every(item => item.done);
+
+      if (!isCompleted) {
+        if (taskDateStr === todayDateStr) {
+          dateBadgeStyle = 'color: #ffa726; font-weight: 700; background-color: rgba(255, 167, 38, 0.12); padding: 2px 6px; border-radius: var(--shape-small);';
+          dateIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="#ffa726" style="vertical-align: middle; margin-right: 4px; animation: pulse 2s infinite;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+        } else if (taskDateStr < todayDateStr) {
+          dateBadgeStyle = 'color: var(--md-sys-color-error); font-weight: 700; background-color: rgba(255, 180, 171, 0.15); padding: 2px 6px; border-radius: var(--shape-small);';
+          dateIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="var(--md-sys-color-error)" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+        }
+      }
+
+      dateBadgeHtml = `
+        <span class="card-footer-date" style="${dateBadgeStyle} display: inline-flex; align-items: center;">
+          ${dateIcon} ${note.date}
+        </span>
+      `;
+    } else {
+      dateBadgeHtml = `<span class="card-footer-date">Hoy</span>`;
+    }
+
     card.innerHTML = `
       <div class="keep-card-header">
-        <span class="keep-card-category">${note.office || 'General'}</span>
+        <div style="display: flex; align-items: center;">
+          <span class="keep-card-category">${note.office || 'General'}</span>
+          ${priorityBadge}
+        </div>
         <div class="card-action-dot">···</div>
       </div>
       <div class="keep-card-title">${note.title || '<em>Sin Título</em>'}</div>
       
-      <div style="width:100%; height:4px; background-color:rgba(0,0,0,0.06); border-radius:var(--shape-full); overflow:hidden; margin-top:-4px;">
-        <div style="width:${progressPercent}%; height:100%; background-color:var(--md-sys-color-primary); transition: width 0.3s ease;"></div>
-      </div>
+      ${progressHtml}
 
       <ul class="card-checklist">
         ${checklistHtml}
@@ -842,10 +1059,13 @@ function renderNotes(filterText = '') {
       <div class="card-footer">
         <div class="card-footer-info">
           <span class="card-footer-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${assignedUsers.length > 0 ? assignedUsers.map(u => u.name).join(', ') : 'Sin Asignar'}</span>
-          <span class="card-footer-date">${note.date || 'Hoy'}</span>
+          ${dateBadgeHtml}
         </div>
-        <div class="assigned-avatars-container" style="display: flex;">
-          ${avatarsHtml}
+        <div style="display: flex; align-items: center; gap: 6px;">
+          ${waShareButtonHtml}
+          <div class="assigned-avatars-container" style="display: flex;">
+            ${avatarsHtml}
+          </div>
         </div>
       </div>
     `;
@@ -881,10 +1101,17 @@ function toggleChecklistItem(e, noteId, index) {
 function renderUsersTable() {
   usersTableBody.innerHTML = '';
   state.users.forEach(u => {
+    const contactInfo = `
+      <div style="font-size:12px; opacity:0.8;">
+        <div>${u.email || '<span style="opacity:0.4;">Sin correo</span>'}</div>
+        <div style="font-weight:600; color:var(--md-sys-color-primary);">${u.phone || '<span style="opacity:0.4;">Sin WhatsApp</span>'}</div>
+      </div>
+    `;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${u.name}</strong></td>
       <td>${u.roles && u.roles.includes('boss') ? 'Administrador' : (u.roles || []).join(', ')}</td>
+      <td>${contactInfo}</td>
       <td><code>${u.password || 'Sin Clave'}</code></td>
       <td>
         <button class="btn btn-text" onclick="openUserModal('${u.id}')" style="padding: 6px 12px; font-size: 13px;">Editar</button>
@@ -1042,6 +1269,34 @@ window.deleteOfficeTag = function(index) {
   }
 };
 
+window.shareTaskOnWhatsApp = function(event, noteId, userId) {
+  event.stopPropagation(); // Prevent opening the note edit modal
+  
+  const note = state.notes.find(n => n.id === noteId) || state.privateNotes.find(n => n.id === noteId);
+  const user = state.users.find(u => u.id === userId);
+  
+  if (!note || !user || !user.phone) return;
+  
+  const checklistText = note.checklist && note.checklist.length > 0
+    ? '\n\n*Checklist:*\n' + note.checklist.map(item => `${item.done ? '✅' : '⬜'} ${item.text}`).join('\n')
+    : '';
+    
+  const priorityText = note.priority === 'high' ? '🔴 ALTA' : (note.priority === 'medium' ? '🟡 MEDIA' : '🟢 BAJA');
+  
+  const message = `*Scriptura - Nueva Tarea Asignada*\n\n` +
+                  `*Título:* ${note.title || 'Sin Título'}\n` +
+                  `*Área/Categoría:* ${note.office || 'General'}\n` +
+                  `*Prioridad:* ${priorityText}\n` +
+                  `*Fecha Límite:* ${note.date || 'Hoy'}` +
+                  `${checklistText}\n\n` +
+                  `_Revisar en: https://ilicode-official.github.io/RegHector/_`;
+                  
+  const encodedText = encodeURIComponent(message);
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${user.phone}&text=${encodedText}`;
+  
+  window.open(whatsappUrl, '_blank');
+};
+
 // Add Office submit handler
 const addOfficeForm = document.getElementById('add-office-form');
 if (addOfficeForm) {
@@ -1158,6 +1413,7 @@ function openNoteModal(note = null, isPrivate = false) {
     });
 
     document.getElementById('note-office-input').value = note.office || '';
+    document.getElementById('note-priority-input').value = note.priority || 'low';
     document.getElementById('note-date-input').value = note.date || '';
     document.getElementById('note-add-calendar').checked = false;
     
@@ -1187,6 +1443,7 @@ function openNoteModal(note = null, isPrivate = false) {
     document.getElementById('delete-note-btn').style.display = 'block';
   } else {
     document.getElementById('note-id').value = '';
+    document.getElementById('note-priority-input').value = 'low';
     document.getElementById('note-date-input').value = '';
     document.getElementById('note-date-input').value = '';
     document.getElementById('note-add-calendar').checked = false;
@@ -1322,6 +1579,8 @@ function openUserModal(userId = null) {
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-name-input').value = user.name;
     document.getElementById('user-password-input').value = user.password || '';
+    document.getElementById('user-email-input').value = user.email || '';
+    document.getElementById('user-phone-input').value = user.phone || '';
     
     const roleSelect = document.getElementById('user-role-input');
     Array.from(roleSelect.options).forEach(opt => {
@@ -1337,6 +1596,8 @@ function openUserModal(userId = null) {
   } else {
     document.getElementById('user-modal-title').textContent = 'Registrar Integrante / Colaborador';
     document.getElementById('user-id').value = '';
+    document.getElementById('user-email-input').value = '';
+    document.getElementById('user-phone-input').value = '';
     document.getElementById('delete-user-btn').style.display = 'none';
     const roleSelect = document.getElementById('user-role-input');
     Array.from(roleSelect.options).forEach(opt => opt.selected = false);
@@ -1421,6 +1682,7 @@ noteForm.addEventListener('submit', (e) => {
   const office = document.getElementById('note-office-input').value;
   const noteDate = document.getElementById('note-date-input').value;
   const addCalendar = document.getElementById('note-add-calendar').checked;
+  const priority = document.getElementById('note-priority-input').value;
   
   const customColorInput = document.getElementById('note-custom-color');
   const customColorDot = document.querySelector('.custom-color-dot');
@@ -1454,7 +1716,7 @@ noteForm.addEventListener('submit', (e) => {
   const isNew = !matchedNote;
   const userRoles = state.currentUser && (state.currentUser.roles || [state.currentUser.role]);
   const isBoss = userRoles && userRoles.includes('boss');
-  let data = { id, title, assignedTo, office, color, checklist, date, commentsList: currentCommentsList };
+  let data = { id, title, assignedTo, office, color, checklist, date, priority, commentsList: currentCommentsList };
   
   if (!isBoss && matchedNote) {
     data = { ...matchedNote, checklist: checklist, commentsList: currentCommentsList }; // Guarda solo avances y comentarios
@@ -1497,10 +1759,12 @@ userForm.addEventListener('submit', (e) => {
   const id = document.getElementById('user-id').value || 'u_' + Date.now();
   const name = document.getElementById('user-name-input').value.trim();
   const password = document.getElementById('user-password-input').value;
+  const email = document.getElementById('user-email-input').value.trim();
+  const phone = document.getElementById('user-phone-input').value.trim();
   const roleSelect = document.getElementById('user-role-input');
   const roles = Array.from(roleSelect.selectedOptions).map(opt => opt.value);
 
-  const data = { id, name, roles, password };
+  const data = { id, name, roles, password, email, phone };
   syncSave('users', id, data);
   userModal.classList.remove('active');
 });
@@ -1526,6 +1790,7 @@ eventForm.addEventListener('submit', (e) => {
 
   const data = { id, title, date, time, isPrivate, desc };
   syncSave('events', id, data);
+  sendCalendarEventEmail(data);
   eventModal.classList.remove('active');
 });
 

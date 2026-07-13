@@ -1190,3 +1190,58 @@ body {
   display: block;
   animation: slideFadeUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
+
+/* Priority colors and badges */
+.keep-card.priority-low {
+  border-left: 6px solid var(--md-sys-color-success) !important;
+}
+.keep-card.priority-medium {
+  border-left: 6px solid #ffa726 !important;
+}
+.keep-card.priority-high {
+  border-left: 6px solid var(--md-sys-color-error) !important;
+}
+
+.keep-card-priority-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--shape-small);
+  margin-left: 8px;
+  letter-spacing: 0.5px;
+}
+
+.badge-priority-low {
+  background-color: rgba(139, 225, 154, 0.15);
+  color: var(--md-sys-color-success);
+}
+body.light-theme .badge-priority-low {
+  background-color: rgba(0, 135, 50, 0.1);
+  color: var(--md-sys-color-success);
+}
+
+.badge-priority-medium {
+  background-color: rgba(255, 167, 38, 0.15);
+  color: #ffa726;
+}
+
+.badge-priority-high {
+  background-color: rgba(255, 180, 171, 0.15);
+  color: var(--md-sys-color-error);
+}
+body.light-theme .badge-priority-high {
+  background-color: rgba(186, 26, 26, 0.1);
+  color: var(--md-sys-color-error);
+}
+
+#global-search-input:focus {
+  border-color: var(--md-sys-color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(158, 203, 255, 0.2);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
