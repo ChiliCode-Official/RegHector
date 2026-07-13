@@ -49,19 +49,100 @@ let state = {
   theme: 'light',
   currentFilter: 'all', 
   calendarDate: new Date(), 
-  selectedCalendarDate: new Date() 
+  selectedCalendarDate: new Date(),
+  emailStats: { sentCount: 3, lastResetMonthYear: "" }
 };
+
+function checkAndResetEmailStats() {
+  const today = new Date();
+  const currentDay = today.getDate();
+  const currentMonthYear = `${today.getMonth() + 1}-${today.getFullYear()}`;
+  
+  if (state.emailStats.lastResetMonthYear !== currentMonthYear && currentDay >= 13) {
+    state.emailStats.sentCount = 0;
+    state.emailStats.lastResetMonthYear = currentMonthYear;
+    
+    localStorage.setItem('scriptura_email_stats', JSON.stringify(state.emailStats));
+    if (useFirebase) {
+      db.collection('config').doc('email_stats').set(state.emailStats);
+    }
+  }
+}
+
+function renderEmailTracker() {
+  const container = document.getElementById('email-tracker-container');
+  if (!container) return;
+
+  const isBoss = state.currentUser && state.currentUser.roles && state.currentUser.roles.includes('boss');
+  if (!isBoss) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  
+  const stats = state.emailStats || { sentCount: 3, lastResetMonthYear: "" };
+  const limit = 200;
+  const count = stats.sentCount || 0;
+  const percent = Math.min((count / limit) * 100, 100);
+
+  const today = new Date();
+  let resetMonth = today.getMonth();
+  let resetYear = today.getFullYear();
+  if (today.getDate() >= 13) {
+    resetMonth++;
+    if (resetMonth > 11) {
+      resetMonth = 0;
+      resetYear++;
+    }
+  }
+  const MONTHS_SPANISH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const resetDateStr = `${13} de ${MONTHS_SPANISH_SHORT[resetMonth]}`;
+
+  const isExceeded = count >= limit;
+
+  container.innerHTML = `
+    <div class="admin-card" style="padding: 20px; background-color: var(--md-sys-color-surface-variant); border-radius: 12px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 700; font-size: 15px;">Uso de Notificaciones por Correo</span>
+        <span style="font-weight: 700; font-size: 14px; color: ${isExceeded ? 'var(--md-sys-color-error)' : 'inherit'};">${count}/${limit}</span>
+      </div>
+      <div style="width: 100%; height: 8px; background-color: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+        <div style="width: ${percent}%; height: 100%; background-color: ${isExceeded ? 'var(--md-sys-color-error)' : 'var(--md-sys-color-primary)'}; transition: width 0.3s ease; border-radius: 4px;"></div>
+      </div>
+      <div style="font-size: 11px; opacity: 0.7; margin-bottom: 12px; font-weight: 600;">Se restablece el día 13 del mes (${resetDateStr})</div>
+      
+      ${isExceeded ? `
+        <div style="font-size: 13px; color: var(--md-sys-color-error); font-weight: 600; line-height: 1.4; margin-bottom: 16px; padding: 10px; background-color: rgba(255, 180, 171, 0.15); border-radius: 8px; border-left: 4px solid var(--md-sys-color-error);">
+          ⚠️ Tus usuarios siguen recibiendo sus tareas desde su app, pero ya no tienen notificaciones por correo.
+        </div>
+      ` : ''}
+
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.05);">
+        <span style="opacity: 0.85; font-weight: 500;">Cotiza tu límite de correos para tener más capacidad:</span>
+        <a href="https://api.whatsapp.com/send?phone=525543508612&text=Hola,%20me%20gustar%C3%ADa%20cotizar%20m%C3%A1s%20capacidad%20de%20correos%20para%20Scriptura." target="_blank" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; border-radius: 20px; text-decoration: none; background-color: #25d366; border-color: #25d366; color: white; font-weight: 600;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align: middle;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.059-3.486l.332.197c1.7.1 3.57.502 5.09.503 5.485 0 9.948-4.414 9.95-9.848.002-2.634-1.02-5.109-2.879-6.97C16.75 2.535 14.28 1.511 11.65 1.51c-5.487 0-9.953 4.414-9.956 9.848a9.789 9.789 0 0 0 1.523 5.176l.217.346L2.43 20.916l4.285-1.12c.001-.001.001-.001 0 0zM17.848 14.39c-.314-.157-1.86-.92-2.148-1.025-.289-.105-.499-.157-.709.157-.21.314-.813 1.025-.996 1.235-.183.21-.366.236-.68.079-1.353-.679-2.222-1.258-3.08-2.733-.183-.314-.183-.509-.026-.666.141-.141.314-.366.471-.549.157-.183.21-.314.314-.523.105-.21.052-.393-.026-.549-.079-.157-.709-1.71-.971-2.338-.255-.615-.515-.532-.709-.542-.183-.01-.393-.01-.603-.01-.21 0-.55.079-.838.393-.289.314-1.102 1.077-1.102 2.626 0 1.549 1.127 3.045 1.284 3.255.157.21 2.217 3.398 5.372 4.764.75.325 1.336.52 1.79.664.755.24 1.442.207 1.985.126.607-.09 1.86-.759 2.122-1.464.262-.705.262-1.307.183-1.432-.079-.126-.289-.21-.603-.367z"/></svg>
+          Cotizar en WhatsApp
+        </a>
+      </div>
+    </div>
+  `;
+}
 
 // Data Synchronizer (LocalStorage + Firebase)
 function loadData() {
   const overlay = document.getElementById('skeleton-loader-overlay');
   if (overlay) overlay.style.display = 'flex';
 
-  // Solo usamos LocalStorage como fallback offline temporal si Firebase tarda, pero NO como fuente de verdad ni para emular.
   const lUsers = localStorage.getItem('scriptura_users');
   const lPrivateNotes = localStorage.getItem('scriptura_private_notes');
   const lNotes = localStorage.getItem('scriptura_notes');
   const lEvents = localStorage.getItem('scriptura_events');
+  const lEmailStats = localStorage.getItem('scriptura_email_stats');
+  
+  state.emailStats = lEmailStats ? JSON.parse(lEmailStats) : { sentCount: 3, lastResetMonthYear: "7-2026" };
+  checkAndResetEmailStats();
+  renderEmailTracker();
   const lOffices = localStorage.getItem('scriptura_offices');
   const lTheme = localStorage.getItem('scriptura_theme');
 
@@ -177,6 +258,19 @@ function loadData() {
         localStorage.setItem('scriptura_offices', JSON.stringify(state.offices));
         renderOfficeTags();
         populateDropdowns();
+      }
+    });
+
+    // 6. Listen to Email Stats config
+    db.collection('config').doc('email_stats').onSnapshot(doc => {
+      if (doc.exists) {
+        state.emailStats = doc.data();
+        localStorage.setItem('scriptura_email_stats', JSON.stringify(state.emailStats));
+        checkAndResetEmailStats();
+        renderEmailTracker();
+      } else {
+        const initialStats = { sentCount: 3, lastResetMonthYear: "7-2026" };
+        db.collection('config').doc('email_stats').set(initialStats);
       }
     });
   } else {
@@ -304,6 +398,12 @@ function triggerNotification(note, isNew = true) {
 function sendEmailJSNotification(note, isNew = true) {
   if (!EMAILJS_CONFIG.serviceId || EMAILJS_CONFIG.serviceId.includes("YOUR_SERVICE")) return;
 
+  const currentCount = state.emailStats.sentCount || 0;
+  if (currentCount >= 200) {
+    console.log("Email limit reached, skipping EmailJS call.");
+    return;
+  }
+
   const assignedUsers = Array.isArray(note.assignedTo) 
     ? note.assignedTo.map(id => state.users.find(u => u.id === id)).filter(Boolean)
     : [state.users.find(u => u.id === note.assignedTo)].filter(Boolean);
@@ -347,8 +447,17 @@ function sendEmailJSNotification(note, isNew = true) {
       body: JSON.stringify(payload)
     })
     .then(res => {
-      if (res.ok) console.log(`Email notification sent successfully to ${user.name}`);
-      else console.error(`Failed to send EmailJS notification:`, res.statusText);
+      if (res.ok) {
+        console.log(`Email notification sent successfully to ${user.name}`);
+        state.emailStats.sentCount = (state.emailStats.sentCount || 0) + 1;
+        localStorage.setItem('scriptura_email_stats', JSON.stringify(state.emailStats));
+        renderEmailTracker();
+        if (useFirebase) {
+          db.collection('config').doc('email_stats').set(state.emailStats);
+        }
+      } else {
+        console.error(`Failed to send EmailJS notification:`, res.statusText);
+      }
     })
     .catch(err => console.error('Error sending EmailJS notification:', err));
   });
@@ -363,6 +472,12 @@ function sendCalendarEventEmail(eventData) {
   if (!hector || !hector.email) return;
 
   if (!EMAILJS_CONFIG.serviceId || EMAILJS_CONFIG.serviceId.includes("YOUR_SERVICE")) return;
+
+  const currentCount = state.emailStats.sentCount || 0;
+  if (currentCount >= 200) {
+    console.log("Email limit reached, skipping calendar event email notification.");
+    return;
+  }
 
   const payload = {
     service_id: EMAILJS_CONFIG.serviceId,
@@ -387,8 +502,17 @@ function sendCalendarEventEmail(eventData) {
     body: JSON.stringify(payload)
   })
   .then(res => {
-    if (res.ok) console.log(`Calendar event email sent successfully to Hector`);
-    else console.error(`Failed to send EmailJS calendar notification to Hector:`, res.statusText);
+    if (res.ok) {
+      console.log(`Calendar event email sent successfully to Hector`);
+      state.emailStats.sentCount = (state.emailStats.sentCount || 0) + 1;
+      localStorage.setItem('scriptura_email_stats', JSON.stringify(state.emailStats));
+      renderEmailTracker();
+      if (useFirebase) {
+        db.collection('config').doc('email_stats').set(state.emailStats);
+      }
+    } else {
+      console.error(`Failed to send EmailJS calendar notification to Hector:`, res.statusText);
+    }
   })
   .catch(err => console.error('Error sending calendar email to Hector:', err));
 }
@@ -521,6 +645,7 @@ function performLogin(user) {
   renderUsersTable();
   populateDropdowns();
   renderOfficeTags();
+  renderEmailTracker();
 }
 
 // Handle login typing behavior
@@ -1989,6 +2114,21 @@ function handleSwipeGesture() {
 function init() {
   if ('Notification' in window) {
     Notification.requestPermission();
+  }
+  
+  // Forzar contador inicial a 3 por única vez para Julio 2026
+  const migrationDone = localStorage.getItem('scriptura_migration_stats_v1');
+  if (!migrationDone) {
+    state.emailStats = { sentCount: 3, lastResetMonthYear: "7-2026" };
+    localStorage.setItem('scriptura_email_stats', JSON.stringify(state.emailStats));
+    localStorage.setItem('scriptura_migration_stats_v1', 'true');
+    setTimeout(() => {
+      if (typeof firebase !== 'undefined' && db) {
+        db.collection('config').doc('email_stats').set(state.emailStats)
+          .then(() => console.log('Email stats force-migrated to 3 in Firestore.'))
+          .catch(err => console.error(err));
+      }
+    }, 1200);
   }
   
   loadData();

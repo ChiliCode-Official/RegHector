@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. DENEGAR POR DEFECTO
+    // Bloquea cualquier acceso no definido explícitamente a cualquier colección
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Funciones auxiliares reutilizables de seguridad
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Verifica si el usuario autenticado tiene el rol de Administrador ('boss')
+    function isBoss() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'boss' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['boss'])
+      );
+    }
+
+    // 2. REGLAS PARA LA COLECCIÓN DE USUARIOS (users)
+    match /users/{userId} {
+      // Cualquier usuario del equipo autenticado puede ver la lista de personal
+      allow read: if isAuthenticated();
+      
+      // Permitir actualizar si es el Administrador o si el propio usuario edita su perfil
+      allow write: if isBoss() || (isAuthenticated() && request.auth.uid == userId);
+      
+      // Validación de esquema al registrar o actualizar
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.name is string 
+        && request.resource.data.name.size() > 0
+        && request.resource.data.roles is list;
+    }
+
+    // 3. REGLAS PARA PENDIENTES PÚBLICOS (notes)
+    match /notes/{noteId} {
+      // Todo el personal autenticado puede leer las tareas asignadas
+      allow read: if isAuthenticated();
+      
+      // Permitir creación si está autenticado y tiene título válido
+      allow create: if isAuthenticated() 
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0;
+        
+      // Solo el Administrador o el colaborador asignado a la tarea pueden actualizarla
+      allow update: if isBoss() || (
+        isAuthenticated() && (
+          request.resource.data.assignedTo == request.auth.uid ||
+          (request.resource.data.assignedTo is list && request.resource.data.assignedTo.hasAny([request.auth.uid]))
+        )
+      );
+      
+      // Solo el Administrador puede borrar tareas públicas
+      allow delete: if isBoss();
+    }
+
+    // 4. REGLAS PARA PENDIENTES PRIVADOS (private_notes)
+    match /private_notes/{noteId} {
+      // Acceso exclusivo para el Administrador (Héctor)
+      allow read, write: if isBoss();
+    }
+
+    // 5. REGLAS PARA EVENTOS DEL CALENDARIO (events)
+    match /events/{eventId} {
+      // Lectura para todos los usuarios autenticados
+      allow read: if isAuthenticated();
+      
+      // Creación y edición de citas
+      allow create, update: if isAuthenticated()
+        && request.resource.data.title is string
+        && request.resource.data.date is string;
+        
+      // Solo el Administrador o el creador del evento pueden borrarlo
+      allow delete: if isBoss();
+    }
+
+    // 6. REGLAS PARA CONFIGURACIÓN GENERAL (config)
+    match /config/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isBoss();
+    }
+  }
+}
